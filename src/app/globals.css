@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root { --background: 240 14% 5%; --foreground: 240 10% 96%; --surface: 240 13% 8%; --card: 240 12% 10%; --border: 240 10% 19%; --muted: 240 10% 14%; --muted-foreground: 240 5% 64%; --primary: 267 89% 67%; --primary-foreground: 0 0% 100%; --success: 153 64% 46%; --warning: 38 92% 56%; --danger: 0 75% 61%; }
+  * { @apply border-border; }
+  body { @apply min-h-screen bg-background font-sans text-foreground antialiased; background-image: radial-gradient(700px circle at 50% -150px, hsl(var(--primary) / .16), transparent 55%); }
+  h1,h2,h3,h4 { @apply font-display tracking-tight text-foreground; }
+  h1 { @apply text-4xl font-semibold sm:text-5xl; } h2 { @apply text-3xl font-semibold; } h3 { @apply text-xl font-semibold; } h4 { @apply text-base font-semibold; }
+  button, input, textarea, select { font: inherit; }
+  :focus-visible { @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background; }
+}
+@layer utilities { .glass { @apply border border-white/[.08] bg-white/[.035] backdrop-blur-md; } .content-container { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; } }
