@@ -2,6 +2,13 @@
 
 All notable changes to TradeForge are recorded in this file.
 
+## [0.3.0] — 2026-07-23
+
+### Added
+
+- Responsive authenticated dashboard foundation with navigation, account metrics, overview, evaluation progress, activity, empty, and loading states.
+- Reusable dashboard feature components using only the established TradeForge tokens, UI primitives, and Lucide iconography.
+
 ## [0.2.0] — 2026-07-21
 
 ### Added

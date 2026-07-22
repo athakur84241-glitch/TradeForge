@@ -1,0 +1,8 @@
+import { CheckCircle2, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { challengeProgress } from "./mock-data";
+
+export function ChallengeProgress() {
+  return <Card className="p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold text-primary">Evaluation progress</p><h3 className="mt-2 text-xl">{challengeProgress.title}</h3><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{challengeProgress.description}</p></div><div className="grid size-16 place-items-center rounded-full border-4 border-primary/20 text-center"><span className="font-display text-lg font-bold text-primary">{challengeProgress.completed}%</span></div></div><div className="mt-7 grid gap-5">{challengeProgress.items.map((item) => <div key={item.label}><div className="mb-2 flex items-center justify-between gap-4"><div className="flex items-center gap-2"><CheckCircle2 className="size-4 text-primary" /><span className="text-sm font-medium">{item.label}</span></div><span className="text-xs font-medium text-muted-foreground">{item.state}</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${item.progress}%` }} /></div><p className="mt-2 text-xs text-muted-foreground">{item.value}</p></div>)}</div><div className="mt-6 flex justify-end border-t border-border pt-4"><Button variant="ghost" size="sm">Review challenge rules <ChevronRight className="size-4" /></Button></div></Card>;
+}

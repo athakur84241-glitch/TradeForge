@@ -3,6 +3,10 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       colors: { background: "hsl(var(--background))", foreground: "hsl(var(--foreground))", surface: "hsl(var(--surface))", card: "hsl(var(--card))", border: "hsl(var(--border))", muted: { DEFAULT: "hsl(var(--muted))", foreground: "hsl(var(--muted-foreground))" }, primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" }, success: "hsl(var(--success))", warning: "hsl(var(--warning))", danger: "hsl(var(--danger))" },
       borderRadius: { "tf-sm": "0.5rem", "tf-md": "0.75rem", "tf-lg": "1rem", "tf-xl": "1.25rem" },
       boxShadow: { glow: "0 0 32px hsl(var(--primary) / .24)", "card": "0 12px 32px rgb(0 0 0 / .22)" },
