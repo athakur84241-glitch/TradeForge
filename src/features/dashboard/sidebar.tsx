@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { navigationItems } from "./mock-data";
 import { cn } from "@/lib/utils";
 
 function Brand() {
-  return <a href="/" className="flex items-center gap-3" aria-label="TradeForge dashboard home"><span className="grid size-9 place-items-center rounded-tf-sm bg-primary font-display text-sm font-bold text-primary-foreground shadow-glow">T</span><span className="font-display text-lg font-bold tracking-tight">TradeForge</span></a>;
+  return <Link href="/" className="flex items-center gap-3" aria-label="TradeForge dashboard home"><span className="grid size-9 place-items-center rounded-tf-sm bg-primary-solid font-display text-sm font-bold text-primary-solid-foreground shadow-glow">T</span><span className="font-display text-lg font-bold tracking-tight">TradeForge</span></Link>;
 }
 
 function NavigationLinks({ compact = false }: { compact?: boolean }) {
