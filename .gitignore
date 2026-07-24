@@ -1,1 +1,11 @@
-node_modules
+.next/
+node_modules/
+work/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+
+# Local recovery archives are preserved outside source control.
+sherr/
+sherr.zip
