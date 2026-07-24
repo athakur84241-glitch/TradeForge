@@ -2,6 +2,21 @@
 
 All notable changes to TradeForge are recorded in this file.
 
+## [0.4.0] — 2026-07-24
+
+### Added
+
+- Rebuilt the complete premium authenticated workspace across dashboard, challenges, accounts, payouts, leaderboard, notifications, search, profile, and settings routes.
+- Added a shared responsive application shell with desktop, tablet, and mobile navigation.
+- Added typed shared mock data, interactive tables, filters, local demo actions, loading, empty, error, and not-found states.
+- Added Recharts-powered balance and equity performance visualization.
+- Added browser verification captures for desktop, tablet, and mobile layouts.
+
+### Changed
+
+- Refined TradeForge tokens, control states, information hierarchy, accessibility, and responsive density.
+- Upgraded the project to Next.js 15.5.21 and React 19.1.9.
+
 ## [0.3.0] — 2026-07-23
 
 ### Added

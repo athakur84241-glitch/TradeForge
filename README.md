@@ -1,17 +1,39 @@
-# TradeForge Design System
+# TradeForge
 
-The foundational React + Next.js interface system for TradeForge. It intentionally includes no business pages or domain workflows.
+TradeForge is a premium, responsive evaluation-account workspace built with Next.js 15, React 19, TypeScript, Tailwind CSS, and Recharts.
 
-## Structure
+## Workspace routes
 
-- `src/app/globals.css` — semantic design tokens, typography, global states, elevation and layout utilities.
-- `src/components/ui` — composable, accessible primitives and domain-neutral patterns.
-- `src/app/page.tsx` — living component reference, not a production marketing page.
+- `/` — performance dashboard, risk overview, evaluation progress, activity, and quick actions
+- `/challenges` — active evaluation, rules, timeline, and challenge models
+- `/accounts` — searchable and sortable account workspace
+- `/payouts` — payout eligibility, statistics, history, and demo request flow
+- `/leaderboard` — weekly and monthly mock rankings
+- `/notifications` — filterable account, rule, payout, challenge, and system updates
+- `/search` — workspace-wide mock search
+- `/profile` — trader profile, security, devices, and account history
+- `/settings` — accessible general, notification, trading, security, privacy, and session controls
 
-## Conventions
+All product records and financial activity are realistic frontend demo data. The application does not execute trades, process real payments, or claim real payouts.
 
-Use semantic Tailwind tokens (`bg-card`, `text-muted-foreground`, `border-border`) instead of raw palette values. Compose components in features; do not add product domain behavior to `components/ui`. Lucide is the sole icon library, using 16px / 20px stroke icons by default.
+## Commands
 
-## Responsive foundation
+```bash
+npm install
+npm run dev
+npm run typecheck
+npm run lint
+npm run build
+```
 
-The default content container is 1280px max width with 16px / 24px / 32px responsive gutters. Components use the 4px spacing scale and collapse fluid grids at Tailwind's `sm` and `lg` breakpoints. This supports mobile (base), tablet (`sm`), laptop (`lg`), and desktop (`xl`) layouts without special-page code.
+## Architecture
+
+- `src/app` — App Router route composition and global states
+- `src/components/ui` — reusable design-system primitives
+- `src/components/workspace` — authenticated shell, navigation, headers, cards, status, and progress patterns
+- `src/features` — feature-based route workspaces, tables, charts, and forms
+- `src/features/workspace/mock-data.ts` — shared typed demo-data layer
+- `docs/brand-guidelines.md` — TradeForge visual and product guidance
+- `docs/verification` — desktop, tablet, and mobile browser captures
+
+Use semantic Tailwind tokens such as `bg-card`, `text-muted-foreground`, and `border-border`; keep product behavior in feature modules and preserve Lucide as the sole interface icon library.
