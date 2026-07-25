@@ -65,15 +65,17 @@ Use semantic tokens, never arbitrary raw colours in components. The token names 
 | Border | `240 10% 19%` | Quiet separation, never decoration |
 | Foreground | `240 10% 96%` | Primary reading text |
 | Muted foreground | `240 5% 64%` | Supporting text and icons |
-| Primary | `267 89% 67%` | Primary actions, selected state, focused state |
+| Primary | `267 89% 72%` | Selected state, focus, readable accent text, and progress |
+| Primary solid | `267 78% 44%` | Filled primary controls with white AA-contrast text |
 | Success | `153 64% 46%` | Confirmed, complete, positive performance |
 | Warning | `38 92% 56%` | Attention or pending review |
 | Danger | `0 75% 61%` | Destructive action, failure, critical issue |
+| Danger solid | `0 72% 42%` | Filled destructive controls with white AA-contrast text |
 
 ### Usage rules
 
 - Purple means **action, selection, and progress**. It is not a general decorative colour.
-- Primary hover is 90% opacity; active uses a subtle 98% scale with no abrupt colour jump.
+- Filled controls use the darker `Primary solid` or `Danger solid` tokens so white labels meet WCAG AA. Primary hover is 90% opacity; active uses a subtle 98% scale with no abrupt colour jump.
 - Disabled controls use 45% opacity and must never look actionable.
 - Borders are normally 100% `Border`; subdued separators may use 70% opacity. Do not use borders below 50% opacity around interactive controls.
 - Glass is reserved for intentional layered moments. Use white at 3.5% opacity, a 8% white border, and blur; never use it for every card.
