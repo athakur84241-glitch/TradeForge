@@ -48,10 +48,10 @@ export function NavigationLinks({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group flex min-h-11 items-center gap-3 rounded-tf-md px-3 text-sm font-medium transition-colors",
+              "group flex min-h-11 items-center gap-3 rounded-tf-md px-3 text-sm font-medium transition-all duration-300 ease-out",
               active
                 ? "bg-primary/15 text-primary"
-                : "text-muted-foreground hover:bg-white/[.05] hover:text-foreground",
+                : "text-muted-foreground hover:bg-white/[.05] hover:text-foreground hover:scale-[1.01]",
               compact && "justify-center px-2",
             )}
           >
@@ -105,8 +105,8 @@ export function WorkspaceNavigation() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "grid min-h-11 place-items-center rounded-tf-sm",
-                active ? "bg-primary/10 text-primary" : "text-muted-foreground",
+                "grid min-h-11 place-items-center rounded-tf-sm transition-all duration-300 ease-out",
+                active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:scale-[1.01]",
               )}
             >
               <Icon className="size-5" aria-hidden="true" />
