@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -13,7 +13,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -122,44 +122,85 @@ const faqItems = [
 ];
 
 function HeroTerminal() {
+  const [marketPulse, setMarketPulse] = useState(0);
+  const [balance, setBalance] = useState(49200);
+  const [change, setChange] = useState(4.8);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setMarketPulse((value) => value + 1);
+      setBalance((value) => value + (Math.random() > 0.5 ? 70 : -48));
+      setChange((value) => {
+        const nextValue = value + (Math.random() > 0.5 ? 0.12 : -0.08);
+        return Number(Math.min(6.2, Math.max(2.4, nextValue)).toFixed(1));
+      });
+    }, 1800);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const animatedChartData = chartData.map((point, index) => {
+    const drift = index % 4 === 0 ? 1.4 : index % 4 === 1 ? -0.6 : index % 4 === 2 ? 1.1 : -0.3;
+    const pulseShift = marketPulse % 2 === 0 ? 0.8 : -0.4;
+    return {
+      ...point,
+      value: Math.min(62, Math.max(34, point.value + drift + pulseShift)),
+    };
+  });
+
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/90 p-6 shadow-[0_36px_90px_-45px_rgba(0,0,0,0.75)] backdrop-blur-xl">
-      <div className="pointer-events-none absolute -right-8 top-8 h-36 w-36 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute left-4 top-10 h-24 w-24 rounded-full bg-cyan-500/10 blur-3xl" />
-      <div className="relative z-10 grid gap-5">
+    <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] p-5 shadow-[0_36px_90px_-45px_rgba(0,0,0,0.75)] backdrop-blur-xl sm:p-6">
+      <div className="pointer-events-none absolute -right-8 top-8 h-36 w-36 rounded-full bg-primary/12 blur-3xl" />
+      <div className="pointer-events-none absolute left-4 top-10 h-24 w-24 rounded-full bg-cyan-500/12 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-primary/10 to-transparent" />
+      <div className="relative z-10 grid gap-4 sm:gap-5">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Account balance</p>
-            <p className="mt-2 text-3xl font-semibold text-white">$49,200</p>
+            <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-white">${balance.toLocaleString()}</p>
           </div>
-          <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-success">
-            +4.8%
-          </span>
+          <div className="flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-success">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/70" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
+            </span>
+            +{change.toFixed(1)}%
+          </div>
         </div>
 
-        <div className="rounded-[1.5rem] border border-white/10 bg-background/40 p-4">
+        <div className="rounded-[1.45rem] border border-white/10 bg-background/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
+            <span>EURUSD</span>
+            <span>14:32 UTC</span>
+          </div>
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <XAxis dataKey="name" hide />
+              <AreaChart data={animatedChartData}>
+                <defs>
+                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
+                    <stop offset="100%" stopColor="rgba(120,87,255,0.18)" />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 11 }} dy={8} />
                 <YAxis hide />
-                <Line type="monotone" dataKey="value" stroke="rgba(255,255,255,0.92)" strokeWidth={3} dot={false} strokeLinecap="round" />
-              </LineChart>
+                <Area type="monotone" dataKey="value" stroke="rgba(255,255,255,0.95)" strokeWidth={2.3} fill="url(#chartGradient)" dot={false} isAnimationActive animationDuration={650} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Open P/L</p>
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/15">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Open P/L</p>
             <p className="mt-3 text-xl font-semibold text-white">$12,840</p>
           </div>
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Risk status</p>
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/15">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Risk status</p>
             <p className="mt-3 text-xl font-semibold text-white">Healthy</p>
           </div>
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Session pace</p>
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/15">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Session pace</p>
             <p className="mt-3 text-xl font-semibold text-white">Active</p>
           </div>
         </div>
@@ -190,70 +231,49 @@ type TwoStepItem = {
 type ChallengeItem = OneStepItem | TwoStepItem;
 
 function ChallengeCard({ challengeType, item }: { challengeType: "1-Step" | "2-Step"; item: ChallengeItem }) {
-  const nodes =
-    challengeType === "1-Step"
-      ? [
-          { label: "Profit Target", value: (item as OneStepItem).profitTarget },
-          { label: "Daily Loss Limit", value: item.dailyLoss },
-          { label: "Overall Loss Limit", value: item.overallLoss },
-          { label: "Minimum Trading Days", value: `${item.minimumDays}` },
-        ]
-      : [
-          { label: "Phase 1 target", value: (item as TwoStepItem).phase1 },
-          { label: "Phase 2 target", value: (item as TwoStepItem).phase2 },
-          { label: "Daily loss limit", value: item.dailyLoss },
-          { label: "Overall loss limit", value: item.overallLoss },
-        ];
+  const isOneStep = challengeType === "1-Step";
+  const profitTarget = isOneStep ? (item as OneStepItem).profitTarget : `${(item as TwoStepItem).phase1} / ${(item as TwoStepItem).phase2}`;
+  const primaryLabel = isOneStep ? "Profit target" : "Phase targets";
 
   return (
-    <article className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/90 p-6 shadow-[0_30px_70px_-38px_rgba(0,0,0,0.55)] transition duration-300 ease-out hover:-translate-y-1 hover:border-white/15 hover:shadow-[0_36px_86px_-40px_rgba(0,0,0,0.6)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/40 via-transparent to-cyan-400/30 opacity-60" />
-      <div className="relative z-10 flex items-start justify-between gap-3">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] p-4 shadow-[0_22px_50px_-28px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_28px_70px_-24px_rgba(120,87,255,0.38)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">{item.size}</p>
-          <p className="mt-3 text-4xl font-semibold text-white">{item.price}</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{item.size}</p>
+          <p className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-white">{item.price}</p>
         </div>
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">
           {challengeType}
         </span>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Profit target</p>
-          <p className="mt-2 text-lg font-semibold text-white">
-            {challengeType === "1-Step"
-              ? (item as OneStepItem).profitTarget
-              : `${(item as TwoStepItem).phase1} / ${(item as TwoStepItem).phase2}`}
-          </p>
+      <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-background/40 p-3.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">{primaryLabel}</span>
+          <span className="font-semibold text-white">{profitTarget}</span>
         </div>
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Risk limits</p>
-          <p className="mt-2 text-lg font-semibold text-white">{item.dailyLoss} / {item.overallLoss}</p>
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Daily loss</span>
+          <span className="font-semibold text-white">{item.dailyLoss}</span>
         </div>
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Days required</p>
-          <p className="mt-2 text-lg font-semibold text-white">{item.minimumDays}</p>
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Overall loss</span>
+          <span className="font-semibold text-white">{item.overallLoss}</span>
         </div>
-        <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Probability profile</p>
-          <p className="mt-2 text-lg font-semibold text-white">Structured evaluation</p>
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Min trading days</span>
+          <span className="font-semibold text-white">{item.minimumDays}</span>
         </div>
       </div>
 
-      <div className="mt-6 space-y-4">
-        {nodes.map((node, index) => (
-          <div key={node.label} className="flex items-start gap-3">
-            <div className="relative flex h-3 w-3 items-center justify-center">
-              <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
-              {index < nodes.length - 1 && <span className="absolute left-1/2 top-4 h-full w-px bg-white/10" />}
-            </div>
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4 flex-1">
-              <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{node.label}</p>
-              <p className="mt-2 text-base font-semibold text-white">{node.value}</p>
-            </div>
-          </div>
-        ))}
+      <div className="mt-5">
+        <button
+          type="button"
+          className="inline-flex w-full items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition duration-300 group-hover:-translate-y-0.5 group-hover:bg-primary/20"
+        >
+          Buy Challenge
+        </button>
       </div>
     </article>
   );
@@ -264,8 +284,13 @@ export function HomePage() {
 
   return (
     <div className="relative overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(circle_at_top_left,_rgba(115,87,255,.18),transparent_36%),radial-gradient(circle_at_top_right,_rgba(63,190,255,.12),transparent_30%)] blur-3xl" />
-      <div className="pointer-events-none absolute left-1/2 top-80 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-[radial-gradient(circle_at_12%_0%,rgba(120,87,255,0.26),transparent_32%),radial-gradient(circle_at_88%_8%,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.09),transparent_54%)] blur-3xl" />
+      <div className="pointer-events-none absolute left-[5%] top-[12%] h-[22rem] w-[22rem] rounded-full bg-primary/16 blur-[140px] animate-[pulse_14s_ease-in-out_infinite]" />
+      <div className="pointer-events-none absolute right-[9%] top-[15%] h-[20rem] w-[20rem] rounded-full bg-sky-500/12 blur-[140px] animate-[pulse_18s_ease-in-out_infinite]" />
+      <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[24rem] w-[24rem] -translate-x-1/2 rounded-full bg-fuchsia-500/10 blur-[150px] animate-[pulse_20s_ease-in-out_infinite]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.035)_48%,transparent_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-90 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:120px_120px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,87,255,0.08),transparent_30%),radial-gradient(circle_at_70%_70%,rgba(59,130,246,0.08),transparent_24%)] animate-[pulse_22s_ease-in-out_infinite]" />
       <div className="relative mx-auto flex max-w-[1400px] flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-6 border-b border-white/10 pb-8 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -295,41 +320,44 @@ export function HomePage() {
         </header>
 
         <main className="relative mt-16 grid gap-16 xl:grid-cols-[0.95fr_1.05fr] xl:items-center">
-          <section className="max-w-2xl space-y-8">
+          <section className="relative max-w-2xl lg:pr-10">
+            <div className="pointer-events-none absolute -left-8 top-6 h-56 w-56 rounded-full bg-primary/8 blur-[110px]" />
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-primary shadow-[0_15px_45px_-35px_rgba(59,130,246,0.65)]">
               Premium fintech × institutional evaluation
             </div>
 
-            <div className="space-y-6">
-              <h1 className="text-5xl font-semibold leading-[1.02] tracking-[-0.03em] text-white sm:text-6xl">
+            <div className="mt-7 space-y-6">
+              <h1 className="max-w-[760px] text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-white sm:text-6xl lg:text-[4.35rem]">
                 Trade with precision. Qualify with confidence.
               </h1>
-              <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
+              <p className="max-w-[640px] text-lg leading-8 text-muted-foreground/95 sm:text-xl">
                 A premium challenge gateway designed for serious traders who want transparency, discipline, and a modern evaluation experience.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4">
-              <Button asChild size="lg">
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <Button asChild size="lg" className="rounded-full border border-primary/30 bg-gradient-to-r from-primary via-primary/90 to-sky-500/80 px-6 py-3.5 text-white shadow-[0_24px_70px_-24px_rgba(120,87,255,0.6)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_80px_-22px_rgba(120,87,255,0.7)]">
                 <Link href="#challenges">Start Your Challenge</Link>
               </Button>
-              <Button asChild variant="outline" size="lg">
+              <Button asChild variant="outline" size="lg" className="rounded-full border-white/15 bg-white/[0.04] px-6 py-3.5 text-white transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:bg-primary/10">
                 <Link href="#challenges">Explore Challenges</Link>
               </Button>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Fast decisions</p>
-                <p className="mt-3 text-2xl font-semibold text-white">Live-progress dashboards</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Clarity first</p>
-                <p className="mt-3 text-2xl font-semibold text-white">Rule flow built for traders</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Premium feel</p>
-                <p className="mt-3 text-2xl font-semibold text-white">Terminal-grade presentation</p>
+            <div className="mt-8 rounded-[1.85rem] border border-white/10 bg-white/[0.03] p-3 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.8)]">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-[1.25rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition duration-300 hover:-translate-y-1 hover:border-primary/25">
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Fast decisions</p>
+                  <p className="mt-3 text-2xl font-semibold text-white">Live-progress dashboards</p>
+                </div>
+                <div className="rounded-[1.25rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition duration-300 hover:-translate-y-1 hover:border-primary/25">
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Clarity first</p>
+                  <p className="mt-3 text-2xl font-semibold text-white">Rule flow built for traders</p>
+                </div>
+                <div className="rounded-[1.25rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition duration-300 hover:-translate-y-1 hover:border-primary/25">
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Premium feel</p>
+                  <p className="mt-3 text-2xl font-semibold text-white">Terminal-grade presentation</p>
+                </div>
               </div>
             </div>
           </section>
@@ -368,7 +396,7 @@ export function HomePage() {
             {whyItems.map((item) => (
               <div
                 key={item.title}
-                className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 transition duration-300 ease-out hover:-translate-y-1 hover:border-white/15 hover:bg-white/10"
+                className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.75)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/25 hover:bg-white/[0.085] hover:shadow-[0_28px_60px_-28px_rgba(120,87,255,0.32)]"
               >
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary">
                   <item.icon className="size-5" aria-hidden="true" />
@@ -409,64 +437,11 @@ export function HomePage() {
             Exact evaluation costs and risk limits shown for every tier. Pick the account size that matches your strategy and start trading with confidence.
           </p>
 
-          <div className="mt-10 grid gap-6 xl:grid-cols-2">
-            <div className="space-y-6">
+          <div className="mt-10">
+            <div className="grid gap-4 lg:grid-cols-5 xl:grid-cols-5">
               {challenges[activeTab].map((item) => (
                 <ChallengeCard key={item.size} challengeType={activeTab} item={item} />
               ))}
-            </div>
-            <div className="rounded-[2rem] border border-white/10 bg-surface/90 p-8 shadow-[0_30px_80px_-40px_rgba(0,0,0,.55)]">
-              <div className="flex items-center gap-3 rounded-[1.5rem] bg-primary/10 p-4">
-                <ShieldCheck className="size-5 text-primary" />
-                <div>
-                  <p className="text-sm font-semibold text-white">Rules at a glance</p>
-                  <p className="text-sm text-muted-foreground">A focused view of the evaluation flow for each challenge type.</p>
-                </div>
-              </div>
-              <div className="mt-8 space-y-6">
-                <div className="space-y-3 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                  <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">1-Step</p>
-                  <div className="grid gap-3">
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      <span>Profit Target</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      <span>Daily Loss Limit</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      <span>Overall Loss Limit</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      <span>Minimum Trading Days</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                  <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">2-Step</p>
-                  <div className="grid gap-3">
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      <span>Phase 1 profit target</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      <span>Phase 2 profit target</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      <span>Funded review</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                  <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Minimum trading days</p>
-                  <p className="mt-2 text-lg font-semibold text-white">3 days</p>
-                </div>
-              </div>
             </div>
           </div>
         </section>
@@ -491,7 +466,7 @@ export function HomePage() {
             ].map((item, index) => (
               <div
                 key={item.label}
-                className="group relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/5 p-6 text-white transition duration-300 ease-out hover:-translate-y-1 hover:border-white/15"
+                className="group relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/5 p-6 text-white shadow-[0_16px_36px_-24px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/25 hover:bg-white/[0.085] hover:shadow-[0_24px_50px_-24px_rgba(120,87,255,0.3)]"
               >
                 <div className="absolute inset-x-6 top-6 h-1 rounded-full bg-primary/20" />
                 <div className="relative z-10 flex items-center justify-between gap-4">
@@ -518,7 +493,7 @@ export function HomePage() {
                 Complete your challenge, experience TradeForge, and be among the first traders to share your story.
               </p>
             </div>
-            <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/5 p-10 text-center shadow-[0_36px_90px_-48px_rgba(0,0,0,.55)]">
+            <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/5 p-10 text-center shadow-[0_36px_90px_-48px_rgba(0,0,0,.55)] backdrop-blur-sm">
               <div className="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Sparkles className="size-7" aria-hidden="true" />
               </div>
@@ -550,7 +525,7 @@ export function HomePage() {
             {faqItems.map((item) => (
               <details
                 key={item.question}
-                className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 transition duration-300 ease-out [&_summary::-webkit-details-marker]:hidden"
+                className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_16px_36px_-24px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:border-white/15 [&_summary::-webkit-details-marker]:hidden"
               >
                 <summary className="flex cursor-pointer items-center justify-between gap-4 text-base font-semibold text-white">
                   {item.question}
