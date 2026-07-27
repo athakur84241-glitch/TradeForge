@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, Manrope } from "next/font/google";
-import { AppShell } from "@/components/workspace/app-shell";
+import { PublicLayout } from "@/components/public/public-layout";
 import "./globals.css";
 
 const sans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" });
@@ -18,7 +18,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${sans.variable} ${display.variable} dark`}>
       <body>
-        <AppShell>{children}</AppShell>
+        <PublicLayout>
+          {children}
+        </PublicLayout>
       </body>
     </html>
   );
