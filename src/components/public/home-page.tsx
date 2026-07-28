@@ -40,20 +40,294 @@ const whyItems = [
   },
 ];
 
-const challenges = {
+const challengeData: Record<"1-Step" | "2-Step" | "Instant Funding", Array<{
+  size: string;
+  price: string;
+  profitTarget: string;
+  profitSplit: string;
+  dailyLoss: string;
+  overallLoss: string;
+  minDays: string;
+  payoutFreq: string;
+  trailingDrawdown?: string;
+  payoutEligibility?: string;
+  secondaryRules: Array<{ label: string; value: string }>;
+}>> = {
   "1-Step": [
-    { size: "$5K", price: "$59", profitTarget: "10%", dailyLoss: "5%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$10K", price: "$109", profitTarget: "10%", dailyLoss: "5%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$25K", price: "$199", profitTarget: "10%", dailyLoss: "5%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$50K", price: "$359", profitTarget: "10%", dailyLoss: "5%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$100K", price: "$498", profitTarget: "10%", dailyLoss: "5%", overallLoss: "10%", minimumDays: 3 },
+    {
+      size: "$5K",
+      price: "$59",
+      profitTarget: "10%",
+      profitSplit: "80%",
+      dailyLoss: "5%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Evaluation Phase", value: "Single Stage" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$10K",
+      price: "$109",
+      profitTarget: "10%",
+      profitSplit: "80%",
+      dailyLoss: "5%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Evaluation Phase", value: "Single Stage" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$25K",
+      price: "$199",
+      profitTarget: "10%",
+      profitSplit: "80%",
+      dailyLoss: "5%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Evaluation Phase", value: "Single Stage" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$50K",
+      price: "$359",
+      profitTarget: "10%",
+      profitSplit: "80%",
+      dailyLoss: "5%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Evaluation Phase", value: "Single Stage" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$100K",
+      price: "$498",
+      profitTarget: "10%",
+      profitSplit: "80%",
+      dailyLoss: "5%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Evaluation Phase", value: "Single Stage" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
   ],
   "2-Step": [
-    { size: "$5K", price: "$33", phase1: "8%", phase2: "5%", dailyLoss: "6%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$10K", price: "$69", phase1: "8%", phase2: "5%", dailyLoss: "6%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$25K", price: "$155", phase1: "8%", phase2: "5%", dailyLoss: "6%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$50K", price: "$259", phase1: "8%", phase2: "5%", dailyLoss: "6%", overallLoss: "10%", minimumDays: 3 },
-    { size: "$100K", price: "$479", phase1: "8%", phase2: "5%", dailyLoss: "6%", overallLoss: "10%", minimumDays: 3 },
+    {
+      size: "$5K",
+      price: "$33",
+      profitTarget: "8% / 5%",
+      profitSplit: "80%",
+      dailyLoss: "6%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Phase 1 Target", value: "8%" },
+        { label: "Phase 2 Target", value: "5%" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$10K",
+      price: "$69",
+      profitTarget: "8% / 5%",
+      profitSplit: "80%",
+      dailyLoss: "6%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Phase 1 Target", value: "8%" },
+        { label: "Phase 2 Target", value: "5%" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$25K",
+      price: "$155",
+      profitTarget: "8% / 5%",
+      profitSplit: "80%",
+      dailyLoss: "6%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Phase 1 Target", value: "8%" },
+        { label: "Phase 2 Target", value: "5%" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$50K",
+      price: "$259",
+      profitTarget: "8% / 5%",
+      profitSplit: "80%",
+      dailyLoss: "6%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Phase 1 Target", value: "8%" },
+        { label: "Phase 2 Target", value: "5%" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$100K",
+      price: "$479",
+      profitTarget: "8% / 5%",
+      profitSplit: "80%",
+      dailyLoss: "6%",
+      overallLoss: "10%",
+      minDays: "3 days",
+      payoutFreq: "Weekly",
+      secondaryRules: [
+        { label: "Phase 1 Target", value: "8%" },
+        { label: "Phase 2 Target", value: "5%" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+  ],
+  "Instant Funding": [
+    {
+      size: "$5K",
+      price: "$66",
+      profitTarget: "None",
+      profitSplit: "90%",
+      dailyLoss: "4%",
+      overallLoss: "8%",
+      trailingDrawdown: "3%",
+      minDays: "None",
+      payoutFreq: "Bi-weekly",
+      payoutEligibility: "After 2% profit",
+      secondaryRules: [
+        { label: "Payout Eligibility", value: "After 2% profit" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Not Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$10K",
+      price: "$134",
+      profitTarget: "None",
+      profitSplit: "90%",
+      dailyLoss: "4%",
+      overallLoss: "8%",
+      trailingDrawdown: "3%",
+      minDays: "None",
+      payoutFreq: "Bi-weekly",
+      payoutEligibility: "After 2% profit",
+      secondaryRules: [
+        { label: "Payout Eligibility", value: "After 2% profit" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Not Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$25K",
+      price: "$249",
+      profitTarget: "None",
+      profitSplit: "90%",
+      dailyLoss: "4%",
+      overallLoss: "8%",
+      trailingDrawdown: "3%",
+      minDays: "None",
+      payoutFreq: "Bi-weekly",
+      payoutEligibility: "After 2% profit",
+      secondaryRules: [
+        { label: "Payout Eligibility", value: "After 2% profit" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Not Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$50K",
+      price: "$424",
+      profitTarget: "None",
+      profitSplit: "90%",
+      dailyLoss: "4%",
+      overallLoss: "8%",
+      trailingDrawdown: "3%",
+      minDays: "None",
+      payoutFreq: "Bi-weekly",
+      payoutEligibility: "After 2% profit",
+      secondaryRules: [
+        { label: "Payout Eligibility", value: "After 2% profit" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Not Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
+    {
+      size: "$100K",
+      price: "$829",
+      profitTarget: "None",
+      profitSplit: "90%",
+      dailyLoss: "4%",
+      overallLoss: "8%",
+      trailingDrawdown: "3%",
+      minDays: "None",
+      payoutFreq: "Bi-weekly",
+      payoutEligibility: "After 2% profit",
+      secondaryRules: [
+        { label: "Payout Eligibility", value: "After 2% profit" },
+        { label: "News Trading", value: "Allowed" },
+        { label: "Weekend Holding", value: "Allowed" },
+        { label: "EA / Bots", value: "Not Allowed" },
+        { label: "Leverage", value: "1:100" },
+      ],
+    },
   ],
 };
 
@@ -73,51 +347,51 @@ const chartData = [
 const faqItems = [
   {
     question: "What is a 1-Step Challenge?",
-    answer: "A single evaluation stage with a 10% profit target, daily and overall drawdown limits, and a minimum of 3 trading days.",
+    answer: "A single evaluation stage with a 10% profit target, 80% profit split, 5% daily loss limit, 10% overall loss limit, 3 minimum trading days, and weekly payouts.",
   },
   {
     question: "What is a 2-Step Challenge?",
-    answer: "A two-stage path with an 8% Phase 1 target and a 5% Phase 2 target before qualification, with the same risk limits and minimum days.",
+    answer: "A two-stage path with an 8% Phase 1 target and a 5% Phase 2 target, 80% profit split, 6% daily loss limit, 10% overall loss limit, 3 minimum trading days, and weekly payouts.",
   },
   {
-    question: "What are the profit targets?",
-    answer: "1-Step challenges require 10% net profit. 2-Step challenges require 8% in phase one and 5% in phase two.",
+    question: "What is Instant Funding?",
+    answer: "Direct access to funded capital with no evaluation phase or profit target. Features a 90% profit split, 4% daily loss limit, 8% overall loss limit, 3% trailing drawdown, bi-weekly payouts, and no minimum trading days requirement.",
+  },
+  {
+    question: "What are the account sizes and prices for Instant Funding?",
+    answer: "Instant Funding accounts are available in five capital tiers: $5K ($66), $10K ($134), $25K ($249), $50K ($424), and $100K ($829).",
+  },
+  {
+    question: "What are the profit targets across programs?",
+    answer: "1-Step requires a 10% net profit target. 2-Step requires 8% in Phase 1 and 5% in Phase 2. Instant Funding has no evaluation profit target.",
   },
   {
     question: "What are the daily and overall loss limits?",
-    answer: "Daily loss limits are 5% for 1-Step and 6% for 2-Step. Overall loss is capped at 10% for all challenge tiers.",
+    answer: "Daily loss limits are 5% for 1-Step, 6% for 2-Step, and 4% for Instant Funding. Overall loss limits are 10% for 1-Step/2-Step and 8% for Instant Funding (with a 3% trailing drawdown).",
   },
   {
-    question: "How are loss limits calculated?",
-    answer: "Loss limits are monitored against the challenge account balance and are displayed within the challenge terms. Exact calculations are confirmed before each challenge starts.",
+    question: "How does payout eligibility work for Instant Funding?",
+    answer: "Instant Funding accounts become eligible for payouts once your account reaches 2% profit. Note that this 2% is a payout eligibility threshold, not an evaluation profit target. Payouts are paid out bi-weekly with a 90% profit split.",
   },
   {
     question: "How many minimum trading days are required?",
-    answer: "All challenge tiers require a minimum of 3 trading days to qualify, giving you time to trade with discipline and verify consistency.",
+    answer: "1-Step and 2-Step evaluation models require a minimum of 3 trading days. Instant Funding has no minimum trading day requirement.",
   },
   {
-    question: "Is news trading allowed?",
-    answer: "Yes. News trading is permitted under the current TradeForge evaluation rules, as long as all challenge conditions are respected.",
+    question: "Is news trading and weekend holding allowed?",
+    answer: "Yes. News trading and weekend holding are fully permitted across all 1-Step, 2-Step, and Instant Funding accounts.",
   },
   {
-    question: "Are there any trading restrictions?",
-    answer: "Challenge rules are focused on profit targets and drawdown management. Any additional trade style restrictions are shown clearly in the challenge terms.",
+    question: "Are EAs or trading bots permitted?",
+    answer: "EAs and automated trading bots are allowed on 1-Step and 2-Step evaluation accounts. However, EAs and bots are not allowed on Instant Funding accounts.",
   },
   {
-    question: "What happens after completing the challenge?",
-    answer: "Successful qualification advances your account toward funded status and the funded program review.",
-  },
-  {
-    question: "How does the funded account work?",
-    answer: "Once qualified, traders enter the funded account stage with capital access and ongoing risk management. Full program terms apply.",
-  },
-  {
-    question: "What happens if I violate a rule?",
-    answer: "Rule violations pause the challenge and require review. Refer to the challenge terms and support for next-step guidance.",
+    question: "What leverage is provided?",
+    answer: "1:100 leverage is available across all 1-Step, 2-Step, and Instant Funding challenge tiers.",
   },
   {
     question: "How are payouts handled?",
-    answer: "Payout details are established in the funded program agreement and depend on performance and account status.",
+    answer: "Payouts are processed weekly for 1-Step and 2-Step evaluation models (80% profit split) and bi-weekly for Instant Funding (90% profit split upon reaching 2% profit).",
   },
 ];
 
@@ -149,17 +423,17 @@ function HeroTerminal() {
   });
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] p-5 shadow-[0_36px_90px_-45px_rgba(0,0,0,0.75)] backdrop-blur-xl sm:p-6">
-      <div className="pointer-events-none absolute -right-8 top-8 h-36 w-36 rounded-full bg-primary/12 blur-3xl" />
-      <div className="pointer-events-none absolute left-4 top-10 h-24 w-24 rounded-full bg-cyan-500/12 blur-3xl" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-primary/10 to-transparent" />
+    <div className="relative overflow-hidden rounded-[2rem] border border-white/15 bg-[linear-gradient(135deg,rgba(255,255,255,0.11),rgba(255,255,255,0.035))] p-5 shadow-[0_40px_100px_-30px_rgba(120,87,255,0.22),0_20px_40px_-20px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-6">
+      <div className="pointer-events-none absolute -right-8 top-8 h-40 w-40 rounded-full bg-primary/15 blur-3xl animate-pulse" />
+      <div className="pointer-events-none absolute left-4 top-10 h-28 w-28 rounded-full bg-cyan-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-primary/15 to-transparent" />
       <div className="relative z-10 grid gap-4 sm:gap-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Account balance</p>
-            <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-white">${balance.toLocaleString()}</p>
+            <p className="text-[11px] uppercase tracking-[0.3em] text-muted-foreground font-medium">Account balance</p>
+            <p className="mt-1.5 text-3xl font-bold tracking-[-0.02em] text-white sm:text-4xl">${balance.toLocaleString()}</p>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-success">
+          <div className="flex items-center gap-2 rounded-full border border-success/30 bg-success/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-success shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]">
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/70" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
@@ -168,10 +442,10 @@ function HeroTerminal() {
           </div>
         </div>
 
-        <div className="rounded-[1.45rem] border border-white/10 bg-background/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <div className="rounded-[1.45rem] border border-white/10 bg-background/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
           <div className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-[0.26em] text-muted-foreground">
-            <span>EURUSD</span>
-            <span>14:32 UTC</span>
+            <span className="font-semibold text-white/90">EURUSD</span>
+            <span className="font-mono">14:32 UTC</span>
           </div>
           <div className="h-44">
             <ResponsiveContainer width="100%" height="100%">
@@ -179,29 +453,29 @@ function HeroTerminal() {
                 <defs>
                   <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="rgba(255,255,255,0.95)" />
-                    <stop offset="100%" stopColor="rgba(120,87,255,0.18)" />
+                    <stop offset="100%" stopColor="rgba(120,87,255,0.22)" />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "rgba(255,255,255,0.45)", fontSize: 11 }} dy={8} />
                 <YAxis hide />
-                <Area type="monotone" dataKey="value" stroke="rgba(255,255,255,0.95)" strokeWidth={2.3} fill="url(#chartGradient)" dot={false} isAnimationActive animationDuration={650} />
+                <Area type="monotone" dataKey="value" stroke="rgba(255,255,255,0.95)" strokeWidth={2.4} fill="url(#chartGradient)" dot={false} isAnimationActive animationDuration={650} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/15">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Open P/L</p>
-            <p className="mt-3 text-xl font-semibold text-white">$12,840</p>
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.04] p-3.5 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/20">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-medium">Open P/L</p>
+            <p className="mt-2 text-xl font-bold text-white">$12,840</p>
           </div>
-          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/15">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Risk status</p>
-            <p className="mt-3 text-xl font-semibold text-white">Healthy</p>
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.04] p-3.5 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/20">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-medium">Risk status</p>
+            <p className="mt-2 text-xl font-bold text-emerald-400">Healthy</p>
           </div>
-          <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-4 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/15">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Session pace</p>
-            <p className="mt-3 text-xl font-semibold text-white">Active</p>
+          <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.04] p-3.5 shadow-[0_10px_28px_-20px_rgba(0,0,0,0.8)] transition duration-300 hover:-translate-y-0.5 hover:border-white/20">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-medium">Session pace</p>
+            <p className="mt-2 text-xl font-bold text-sky-400">Active</p>
           </div>
         </div>
       </div>
@@ -209,88 +483,129 @@ function HeroTerminal() {
   );
 }
 
-type OneStepItem = {
+type ChallengeModel = "1-Step" | "2-Step" | "Instant Funding";
+
+type PlanItem = {
   size: string;
   price: string;
   profitTarget: string;
+  profitSplit: string;
   dailyLoss: string;
   overallLoss: string;
-  minimumDays: number;
+  minDays: string;
+  payoutFreq: string;
+  trailingDrawdown?: string;
+  payoutEligibility?: string;
+  secondaryRules: Array<{ label: string; value: string }>;
 };
 
-type TwoStepItem = {
-  size: string;
-  price: string;
-  phase1: string;
-  phase2: string;
-  dailyLoss: string;
-  overallLoss: string;
-  minimumDays: number;
-};
-
-type ChallengeItem = OneStepItem | TwoStepItem;
-
-function ChallengeCard({ challengeType, item }: { challengeType: "1-Step" | "2-Step"; item: ChallengeItem }) {
-  const isOneStep = challengeType === "1-Step";
-  const profitTarget = isOneStep ? (item as OneStepItem).profitTarget : `${(item as TwoStepItem).phase1} / ${(item as TwoStepItem).phase2}`;
-  const primaryLabel = isOneStep ? "Profit target" : "Phase targets";
+function ChallengeCard({ model, item }: { model: ChallengeModel; item: PlanItem }) {
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] p-4 shadow-[0_22px_50px_-28px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_28px_70px_-24px_rgba(120,87,255,0.38)]">
+    <article className="group relative flex flex-col self-start overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))] p-4 shadow-[0_22px_50px_-28px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/35 hover:shadow-[0_28px_70px_-24px_rgba(120,87,255,0.38)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{item.size}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-[-0.02em] text-white">{item.price}</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground font-medium">{item.size}</p>
+          <p className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-white">{item.price}</p>
         </div>
-        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-primary">
-          {challengeType}
+        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+          {model}
         </span>
       </div>
 
-      <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-background/40 p-3.5">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{primaryLabel}</span>
-          <span className="font-semibold text-white">{profitTarget}</span>
+      <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-background/40 p-3.5 space-y-2.5 text-xs sm:text-sm">
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">
+            {model === "2-Step" ? "Phase Targets" : "Profit Target"}
+          </span>
+          <span className={cn("font-semibold", item.profitTarget === "None" ? "text-emerald-400" : "text-white")}>
+            {item.profitTarget}
+          </span>
         </div>
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Daily loss</span>
+
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Profit Split</span>
+          <span className="font-semibold text-emerald-400">{item.profitSplit}</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Daily Loss</span>
           <span className="font-semibold text-white">{item.dailyLoss}</span>
         </div>
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Overall loss</span>
+
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Overall Loss</span>
           <span className="font-semibold text-white">{item.overallLoss}</span>
         </div>
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Min trading days</span>
-          <span className="font-semibold text-white">{item.minimumDays}</span>
+
+        {item.trailingDrawdown && (
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Trailing Drawdown</span>
+            <span className="font-semibold text-white">{item.trailingDrawdown}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Min Trading Days</span>
+          <span className="font-semibold text-white">{item.minDays}</span>
         </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-muted-foreground">Payout Frequency</span>
+          <span className="font-semibold text-white">{item.payoutFreq}</span>
+        </div>
+
+        {item.payoutEligibility && (
+          <div className="flex items-center justify-between pt-1 border-t border-white/10">
+            <span className="text-muted-foreground text-[11px]">Payout Eligibility</span>
+            <span className="font-medium text-primary text-[11px]">{item.payoutEligibility}</span>
+          </div>
+        )}
       </div>
 
-      <div className="mt-5">
+      <div className="mt-4 space-y-2">
         <button
           type="button"
-          className="inline-flex w-full items-center justify-center rounded-full border border-primary/20 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition duration-300 group-hover:-translate-y-0.5 group-hover:bg-primary/20"
+          className="inline-flex w-full items-center justify-center rounded-full border border-primary/30 bg-primary/15 px-3 py-2.5 text-xs font-semibold text-primary transition duration-300 hover:bg-primary/25 hover:border-primary/50 group-hover:-translate-y-0.5"
         >
           Buy Challenge
         </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDetails(!showDetails)}
+          className="flex w-full items-center justify-center gap-1.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-white transition"
+        >
+          <span>{showDetails ? "Hide Full Rules" : "Full Rules"}</span>
+          <span className={cn("transition-transform duration-200 text-[10px]", showDetails && "rotate-180")}>▼</span>
+        </button>
+
+        {showDetails && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5 text-[11px] space-y-1.5 animate-in fade-in duration-200">
+            {item.secondaryRules.map((rule) => (
+              <div key={rule.label} className="flex justify-between items-center text-muted-foreground">
+                <span>{rule.label}</span>
+                <span className="font-medium text-white">{rule.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </article>
   );
 }
-
 export function HomePage() {
-  const [activeTab, setActiveTab] = useState<"1-Step" | "2-Step">("1-Step");
+  const [activeTab, setActiveTab] = useState<ChallengeModel>("1-Step");
 
   return (
     <div className="relative overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[760px] bg-[radial-gradient(circle_at_12%_0%,rgba(120,87,255,0.26),transparent_32%),radial-gradient(circle_at_88%_8%,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.09),transparent_54%)] blur-3xl" />
-      <div className="pointer-events-none absolute left-[5%] top-[12%] h-[22rem] w-[22rem] rounded-full bg-primary/16 blur-[140px] animate-[pulse_14s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute right-[9%] top-[15%] h-[20rem] w-[20rem] rounded-full bg-sky-500/12 blur-[140px] animate-[pulse_18s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[24rem] w-[24rem] -translate-x-1/2 rounded-full bg-fuchsia-500/10 blur-[150px] animate-[pulse_20s_ease-in-out_infinite]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.035)_48%,transparent_100%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-90 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.045)_1px,transparent_1px)] [background-size:120px_120px]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,87,255,0.08),transparent_30%),radial-gradient(circle_at_70%_70%,rgba(59,130,246,0.08),transparent_24%)] animate-[pulse_22s_ease-in-out_infinite]" />
+      {/* Subtle premium ambient background glow animation */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[900px] bg-[radial-gradient(circle_at_20%_15%,hsl(var(--primary)/.22),transparent_50%),radial-gradient(circle_at_80%_20%,hsl(220_100%_76%/.16),transparent_45%),radial-gradient(circle_at_50%_60%,hsl(267_89%_72%/.10),transparent_55%)] blur-3xl opacity-85 animate-[ambientDrift_24s_ease-in-out_infinite_alternate]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.025)_48%,transparent_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:120px_120px]" />
+      
       <div className="relative mx-auto flex max-w-[1400px] flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-6 border-b border-white/10 pb-8 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -319,44 +634,47 @@ export function HomePage() {
           </div>
         </header>
 
-        <main className="relative mt-16 grid gap-16 xl:grid-cols-[0.95fr_1.05fr] xl:items-center">
-          <section className="relative max-w-2xl lg:pr-10">
-            <div className="pointer-events-none absolute -left-8 top-6 h-56 w-56 rounded-full bg-primary/8 blur-[110px]" />
+        <main className="relative mt-16 grid gap-14 lg:gap-16 xl:grid-cols-[1fr_1fr] xl:items-center">
+          <section className="relative max-w-3xl lg:pr-4">
+            <div className="pointer-events-none absolute -left-8 top-6 h-56 w-56 rounded-full bg-primary/10 blur-[110px]" />
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-primary shadow-[0_15px_45px_-35px_rgba(59,130,246,0.65)]">
               Premium fintech × institutional evaluation
             </div>
 
-            <div className="mt-7 space-y-6">
-              <h1 className="max-w-[760px] text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-white sm:text-6xl lg:text-[4.35rem]">
-                Trade with precision. Qualify with confidence.
+            <div className="mt-5 space-y-6">
+              <h1 className="max-w-3xl font-display text-4xl font-bold leading-[1.1] tracking-[-0.035em] text-white sm:text-5xl lg:text-[3.85rem] xl:text-[4.15rem] lg:leading-[1.12]">
+                <span className="block text-white sm:whitespace-nowrap lg:whitespace-normal">Trade with precision.</span>
+                <span className="block mt-1.5 sm:mt-2 bg-gradient-to-r from-white via-white/95 to-primary/85 bg-clip-text text-transparent sm:whitespace-nowrap lg:whitespace-normal">
+                  Qualify with confidence.
+                </span>
               </h1>
               <p className="max-w-[640px] text-lg leading-8 text-muted-foreground/95 sm:text-xl">
                 A premium challenge gateway designed for serious traders who want transparency, discipline, and a modern evaluation experience.
               </p>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <Button asChild size="lg" className="rounded-full border border-primary/30 bg-gradient-to-r from-primary via-primary/90 to-sky-500/80 px-6 py-3.5 text-white shadow-[0_24px_70px_-24px_rgba(120,87,255,0.6)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_80px_-22px_rgba(120,87,255,0.7)]">
+            <div className="mt-9 flex flex-wrap items-center gap-4">
+              <Button asChild size="lg" className="rounded-full border border-primary/30 bg-gradient-to-r from-primary via-primary/95 to-sky-500/85 px-7 py-3.5 text-white shadow-[0_20px_50px_-15px_rgba(120,87,255,0.5)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_25px_60px_-12px_rgba(120,87,255,0.65)]">
                 <Link href="#challenges">Start Your Challenge</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="rounded-full border-white/15 bg-white/[0.04] px-6 py-3.5 text-white transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:bg-primary/10">
+              <Button asChild variant="outline" size="lg" className="rounded-full border-white/15 bg-white/[0.04] px-7 py-3.5 text-white transition duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-primary/10">
                 <Link href="#challenges">Explore Challenges</Link>
               </Button>
             </div>
 
-            <div className="mt-8 rounded-[1.85rem] border border-white/10 bg-white/[0.03] p-3 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.8)]">
+            <div className="mt-9 rounded-[1.85rem] border border-white/10 bg-white/[0.03] p-3 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.8)]">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[1.25rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition duration-300 hover:-translate-y-1 hover:border-primary/25">
-                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Fast decisions</p>
-                  <p className="mt-3 text-2xl font-semibold text-white">Live-progress dashboards</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground font-medium">Fast decisions</p>
+                  <p className="mt-3 text-xl font-semibold text-white">Live-progress dashboards</p>
                 </div>
                 <div className="rounded-[1.25rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition duration-300 hover:-translate-y-1 hover:border-primary/25">
-                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Clarity first</p>
-                  <p className="mt-3 text-2xl font-semibold text-white">Rule flow built for traders</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground font-medium">Clarity first</p>
+                  <p className="mt-3 text-xl font-semibold text-white">Rule flow built for traders</p>
                 </div>
                 <div className="rounded-[1.25rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition duration-300 hover:-translate-y-1 hover:border-primary/25">
-                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Premium feel</p>
-                  <p className="mt-3 text-2xl font-semibold text-white">Terminal-grade presentation</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground font-medium">Premium feel</p>
+                  <p className="mt-3 text-xl font-semibold text-white">Terminal-grade presentation</p>
                 </div>
               </div>
             </div>
@@ -364,14 +682,14 @@ export function HomePage() {
 
           <section className="relative">
             <div className="absolute inset-x-0 top-0 -z-10 h-[420px] rounded-[2rem] bg-gradient-to-br from-primary/15 via-transparent to-cyan-500/5 blur-3xl" />
-            <div className="rounded-[2rem] border border-white/10 bg-surface/90 p-6 shadow-[0_40px_100px_-48px_rgba(0,0,0,.65)] backdrop-blur-xl">
-              <div className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-background/80 p-6 shadow-[0_20px_40px_-20px_rgba(0,0,0,.35)]">
+            <div className="rounded-[2rem] border border-white/10 bg-surface/90 p-5 sm:p-6 shadow-[0_40px_100px_-48px_rgba(0,0,0,.65)] backdrop-blur-xl">
+              <div className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-background/80 p-5 sm:p-6 shadow-[0_20px_40px_-20px_rgba(0,0,0,.35)]">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Trader terminal</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">Live risk and account pulse</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-medium">Trader terminal</p>
+                    <p className="mt-1.5 text-2xl font-semibold text-white">Live risk & account pulse</p>
                   </div>
-                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
                     Connected
                   </span>
                 </div>
@@ -384,7 +702,7 @@ export function HomePage() {
         <section className="mt-24" id="why">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <p className="text-sm uppercase tracking-[0.3em] text-primary">Why TradeForge</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-primary font-medium">Why TradeForge</p>
               <h2 className="mt-3 text-4xl font-semibold text-white">The clarity you need to trade better.</h2>
             </div>
             <p className="max-w-xl text-sm leading-7 text-muted-foreground">
@@ -411,17 +729,17 @@ export function HomePage() {
         <section className="mt-24" id="challenges">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-primary">Challenges</p>
+              <p className="text-sm uppercase tracking-[0.3em] text-primary font-medium">Challenges</p>
               <h2 className="mt-3 text-4xl font-semibold text-white">Choose the path that fits your edge.</h2>
             </div>
-            <div className="inline-flex rounded-full bg-white/5 p-1 shadow-[0_24px_50px_-40px_rgba(255,255,255,0.3)]">
-              {(["1-Step", "2-Step"] as const).map((option) => (
+            <div className="inline-flex rounded-full bg-white/5 p-1 border border-white/10 shadow-[0_24px_50px_-40px_rgba(255,255,255,0.3)]">
+              {(["1-Step", "2-Step", "Instant Funding"] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
                   onClick={() => setActiveTab(option)}
                   className={cn(
-                    "rounded-full px-5 py-2 text-sm font-semibold transition duration-300",
+                    "rounded-full px-5 py-2 text-xs sm:text-sm font-semibold transition duration-300",
                     activeTab === option
                       ? "bg-white text-background shadow-glow"
                       : "text-muted-foreground hover:text-white",
@@ -438,9 +756,9 @@ export function HomePage() {
           </p>
 
           <div className="mt-10">
-            <div className="grid gap-4 lg:grid-cols-5 xl:grid-cols-5">
-              {challenges[activeTab].map((item) => (
-                <ChallengeCard key={item.size} challengeType={activeTab} item={item} />
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 items-start">
+              {challengeData[activeTab].map((item) => (
+                <ChallengeCard key={item.size} model={activeTab} item={item} />
               ))}
             </div>
           </div>
@@ -521,7 +839,7 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="mt-10 grid gap-4 xl:grid-cols-2">
+          <div className="mt-10 grid gap-4 xl:grid-cols-2 items-start">
             {faqItems.map((item) => (
               <details
                 key={item.question}
