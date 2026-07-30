@@ -4,20 +4,13 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-/** Map known Supabase error messages to user-friendly text. */
 function friendlyError(message: string): string {
   const lower = message.toLowerCase();
-  if (lower.includes("already registered") || lower.includes("already exists") || lower.includes("user already")) {
-    return "An account with this email already exists. Try signing in instead.";
-  }
-  if (lower.includes("password") && (lower.includes("weak") || lower.includes("short") || lower.includes("at least"))) {
-    return "Password is too weak. Please use at least 8 characters.";
+  if (lower.includes("rate limit") || lower.includes("too many")) {
+    return "Too many requests. Please wait a few minutes before trying again.";
   }
   if (lower.includes("invalid email") || lower.includes("valid email")) {
     return "Please enter a valid email address.";
-  }
-  if (lower.includes("rate limit") || lower.includes("too many")) {
-    return "Too many requests. Please wait a few minutes before trying again.";
   }
   if (lower.includes("network") || lower.includes("fetch")) {
     return "Network error. Please check your connection and try again.";
@@ -25,10 +18,8 @@ function friendlyError(message: string): string {
   return message;
 }
 
-export default function SignUpPage() {
-  const [name, setName] = useState("");
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,24 +31,24 @@ export default function SignUpPage() {
     setError(null);
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-        },
-      },
-    });
+    // Derive the callback URL from the current window origin so this works
+    // on localhost in development and on any deployment domain in production.
+    const redirectTo =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/auth/update-password`
+        : "/auth/update-password";
 
-    if (authError) {
-      setError(friendlyError(authError.message));
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      { redirectTo }
+    );
+
+    if (resetError) {
+      setError(friendlyError(resetError.message));
       setLoading(false);
       return;
     }
 
-    // Supabase sends a confirmation email by default.
-    // Show a message to check inbox rather than silently redirect.
     setSuccess(true);
     setLoading(false);
   }
@@ -85,21 +76,22 @@ export default function SignUpPage() {
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              We sent a confirmation link to{" "}
-              <span className="font-semibold text-white">{email}</span>. Click
-              the link in the email to activate your account, then sign in.
+              If an account exists for{" "}
+              <span className="font-semibold text-white">{email}</span>, we sent
+              a password-reset link. Click the link in the email to choose a new
+              password.
             </p>
 
             <p className="mt-2 text-xs text-muted-foreground">
-              If you don&apos;t see it, check your spam folder. The link expires
-              after 24 hours.
+              Didn&apos;t receive it? Check your spam folder. The link expires
+              after 1 hour.
             </p>
 
             <Link
               href="/sign-in"
               className="mt-7 inline-block w-full rounded-xl bg-primary px-4 py-3 text-center font-semibold text-white transition hover:opacity-90"
             >
-              Go to Sign In
+              Back to Sign In
             </Link>
           </div>
         </div>
@@ -120,35 +112,15 @@ export default function SignUpPage() {
             </Link>
 
             <h1 className="mt-8 text-3xl font-bold tracking-tight text-white">
-              Create your account
+              Reset your password
             </h1>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              Join TradeForge and start your evaluation journey.
+              Enter your account email and we&apos;ll send you a reset link.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label
-                htmlFor="name"
-                className="mb-2 block text-sm font-medium text-white"
-              >
-                Full name
-              </label>
-
-              <input
-                id="name"
-                type="text"
-                required
-                autoComplete="name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Your full name"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-primary/60"
-              />
-            </div>
-
             <div>
               <label
                 htmlFor="email"
@@ -169,27 +141,6 @@ export default function SignUpPage() {
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-2 block text-sm font-medium text-white"
-              >
-                Password
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="At least 8 characters"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-primary/60"
-              />
-            </div>
-
             {error && (
               <p
                 role="alert"
@@ -204,12 +155,12 @@ export default function SignUpPage() {
               disabled={loading}
               className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "Creating account…" : "Create Account"}
+              {loading ? "Sending link…" : "Send Reset Link"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            Remembered your password?{" "}
             <Link
               href="/sign-in"
               className="font-medium text-primary hover:underline"

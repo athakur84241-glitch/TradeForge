@@ -3,17 +3,41 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, ChevronDown, CircleHelp, Menu, Search, X } from "lucide-react";
+import { Bell, ChevronDown, CircleHelp, LogOut, Menu, Search, X } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import { workspaceUser } from "@/features/workspace/mock-data";
 import { NavigationLinks } from "./workspace-navigation";
 import { TradeForgeBrand } from "./brand";
+
+/** Derive display name and initials from a Supabase user. */
+function resolveUser(user: User | null): { name: string; initials: string } {
+  if (!user) return { name: workspaceUser.name, initials: workspaceUser.initials };
+
+  const fullName: string = (user.user_metadata?.full_name as string | undefined) ?? "";
+  if (fullName.trim()) {
+    const parts = fullName.trim().split(/\s+/);
+    const initials =
+      parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : parts[0].slice(0, 2).toUpperCase();
+    return { name: fullName.trim(), initials };
+  }
+
+  // Fall back to email prefix
+  const emailName = user.email?.split("@")[0] ?? "User";
+  return { name: emailName, initials: emailName.slice(0, 2).toUpperCase() };
+}
 
 export function TopNavigation() {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [unreadNotifications, setUnreadNotifications] = useState(3);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
 
+  // Listen for notification count changes from other components
   useEffect(() => {
     function updateUnreadNotifications(event: Event) {
       setUnreadNotifications((event as CustomEvent<number>).detail);
@@ -23,11 +47,34 @@ export function TopNavigation() {
     return () => window.removeEventListener("tradeforge:notification-count", updateUnreadNotifications);
   }, []);
 
+  // Fetch the current Supabase user on mount and subscribe to auth changes
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUser(data.user);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = query.trim();
     router.push(value ? `/search?q=${encodeURIComponent(value)}` : "/search");
   }
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    await supabase.auth.signOut();
+    router.push("/sign-in");
+    router.refresh();
+  }
+
+  const { name, initials } = resolveUser(currentUser);
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
@@ -65,7 +112,11 @@ export function TopNavigation() {
           <Link
             href="/notifications"
             className="relative grid size-10 place-items-center rounded-tf-md text-muted-foreground transition-colors hover:bg-white/[.06] hover:text-foreground"
-            aria-label={unreadNotifications > 0 ? `Open notifications, ${unreadNotifications} unread` : "Open notifications"}
+            aria-label={
+              unreadNotifications > 0
+                ? `Open notifications, ${unreadNotifications} unread`
+                : "Open notifications"
+            }
           >
             <Bell className="size-5" />
             {unreadNotifications > 0 && (
@@ -87,18 +138,34 @@ export function TopNavigation() {
           <details className="group relative">
             <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-tf-md p-1.5 text-left hover:bg-white/[.06] [&::-webkit-details-marker]:hidden">
               <span className="grid size-8 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
-                {workspaceUser.initials}
+                {initials}
               </span>
-              <span className="hidden text-sm font-semibold sm:block">{workspaceUser.name}</span>
+              <span className="hidden text-sm font-semibold sm:block">{name}</span>
               <ChevronDown className="hidden size-4 text-muted-foreground transition-transform group-open:rotate-180 sm:block" />
             </summary>
             <div className="absolute right-0 top-12 w-52 rounded-tf-md border border-border bg-card p-1 shadow-card">
-              <Link className="block rounded-tf-sm px-3 py-2 text-sm text-muted-foreground hover:bg-white/[.06] hover:text-foreground" href="/profile">
+              <Link
+                className="block rounded-tf-sm px-3 py-2 text-sm text-muted-foreground hover:bg-white/[.06] hover:text-foreground"
+                href="/profile"
+              >
                 View profile
               </Link>
-              <Link className="block rounded-tf-sm px-3 py-2 text-sm text-muted-foreground hover:bg-white/[.06] hover:text-foreground" href="/settings">
+              <Link
+                className="block rounded-tf-sm px-3 py-2 text-sm text-muted-foreground hover:bg-white/[.06] hover:text-foreground"
+                href="/settings"
+              >
                 Workspace settings
               </Link>
+              <hr className="my-1 border-border" />
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="flex w-full items-center gap-2 rounded-tf-sm px-3 py-2 text-sm text-muted-foreground hover:bg-white/[.06] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <LogOut className="size-4" />
+                {signingOut ? "Signing out…" : "Sign out"}
+              </button>
             </div>
           </details>
         </div>

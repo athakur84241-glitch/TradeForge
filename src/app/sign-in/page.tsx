@@ -2,27 +2,58 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+
+/** Map known Supabase error messages to user-friendly text. */
+function friendlyError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("invalid login credentials")) {
+    return "Incorrect email or password. Please try again.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "Please confirm your email address before signing in. Check your inbox.";
+  }
+  if (lower.includes("rate limit") || lower.includes("too many")) {
+    return "Too many attempts. Please wait a few minutes and try again.";
+  }
+  if (lower.includes("network") || lower.includes("fetch")) {
+    return "Network error. Please check your connection and try again.";
+  }
+  return message;
+}
+
 export default function SignInPage() {
-    const router = useRouter();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("next") ?? "/";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-  event.preventDefault();
+    event.preventDefault();
+    if (loading) return;
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+    setError(null);
+    setLoading(true);
 
-  if (error) {
-    alert(error.message);
-    return;
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      setError(friendlyError(authError.message));
+      setLoading(false);
+      return;
+    }
+
+    router.push(redirectTo);
+    router.refresh();
   }
-
-router.push("/dashboard");}
 
   return (
     <main className="min-h-screen bg-background px-6 py-12 text-foreground">
@@ -58,6 +89,7 @@ router.push("/dashboard");}
                 id="email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
@@ -86,6 +118,7 @@ router.push("/dashboard");}
                 id="password"
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter your password"
@@ -93,11 +126,21 @@ router.push("/dashboard");}
               />
             </div>
 
+            {error && (
+              <p
+                role="alert"
+                className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+              >
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white transition hover:opacity-90"
+              disabled={loading}
+              className="w-full rounded-xl bg-primary px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Sign In
+              {loading ? "Signing in…" : "Sign In"}
             </button>
           </form>
 

@@ -626,7 +626,7 @@ export function HomePage() {
 
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline" size="sm">
-              <Link href="/">Sign In</Link>
+              <Link href="/sign-in">Sign In</Link>
             </Button>
             <Button asChild size="sm">
               <Link href="#challenges">Start Your Challenge</Link>
@@ -866,7 +866,7 @@ export function HomePage() {
               <Link href="#challenges">Start Your Challenge</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link href="/">Sign In</Link>
+              <Link href="/sign-in">Sign In</Link>
             </Button>
           </div>
         </section>
