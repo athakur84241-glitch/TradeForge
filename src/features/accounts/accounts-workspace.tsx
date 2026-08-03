@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Archive,
@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/workspace/status-badge";
-import { accounts } from "@/features/workspace/mock-data";
+import { supabase } from "@/lib/supabase";
 import type { Account } from "@/features/workspace/types";
 
 const categories = ["All", "Evaluation", "Funded", "Passed", "Failed", "Archived"] as const;
@@ -34,6 +34,91 @@ function statusTone(status: Account["status"]) {
 }
 
 export function AccountsWorkspace() {
+  const [fetchedAccounts, setFetchedAccounts] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  function deriveCategory(status: Account['status'], phase: Account['phase'] | string | null) {
+    if (status === 'Funded') return 'Funded';
+    if (status === 'Passed') return 'Passed';
+    if (status === 'Failed') return 'Failed';
+    if (status === 'Archived') return 'Archived';
+    // default to Evaluation for any other active/ongoing statuses
+    return 'Evaluation';
+  }
+
+  function formatDate(input: string | null | undefined) {
+    if (!input) return '';
+    try {
+      const d = new Date(input);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return String(input);
+    }
+  }
+
+  function formatDateTime(input: string | null | undefined) {
+    if (!input) return '';
+    try {
+      const d = new Date(input);
+      const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `${date}, ${time}`;
+    } catch {
+      return String(input);
+    }
+  }
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const userRes = await supabase.auth.getUser();
+        const user = userRes.data?.user;
+        if (!user) {
+          if (mounted) setFetchedAccounts([]);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('accounts')
+          .select('*')
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        const mapped: Account[] = (data || []).map((r: any) => ({
+          id: r.id,
+          name: r.account_name,
+          size: r.account_size ?? 0,
+          category: deriveCategory(r.status, r.phase),
+          status: (r.status as Account['status']) ?? 'Active',
+          phase: (r.phase as Account['phase']) ?? 'Phase 1',
+          balance: Number(r.balance ?? 0),
+          equity: Number(r.equity ?? 0),
+          pnl: Number(r.pnl ?? 0),
+          pnlPercent: Number(r.pnl_percent ?? r.pnlPercent ?? 0),
+          platform: r.platform ?? '',
+          createdAt: formatDate(r.created_at),
+          lastActivity: formatDateTime(r.last_activity),
+          health: 'Good standing',
+        }));
+
+        if (mounted) setFetchedAccounts(mapped);
+      } catch (err: any) {
+        console.error('Failed to load accounts', err);
+        if (mounted) setFetchError(err?.message ?? String(err));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("All");
   const [sortKey, setSortKey] = useState<keyof Account>("status");
@@ -43,7 +128,7 @@ export function AccountsWorkspace() {
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return accounts
+    return fetchedAccounts
       .filter((account) => category === "All" || account.category === category)
       .filter((account) => !normalized || `${account.name} ${account.id} ${account.platform}`.toLowerCase().includes(normalized))
       .sort((left, right) => {
@@ -59,7 +144,7 @@ export function AccountsWorkspace() {
           : String(left[sortKey]).localeCompare(String(right[sortKey]), undefined, { numeric: true });
         return descending ? -result : result;
       });
-  }, [category, descending, query, sortKey]);
+  }, [category, descending, query, sortKey, fetchedAccounts]);
 
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const visible = filtered.slice(page * pageSize, page * pageSize + pageSize);
@@ -79,6 +164,14 @@ export function AccountsWorkspace() {
     setPage(0);
   }
 
+  // Summary calculations derived from fetched accounts
+  const totalEquity = fetchedAccounts.reduce((sum, a) => sum + Number(a.equity || 0), 0);
+  const activeCount = fetchedAccounts.filter((a) => a.status === 'Active').length;
+  const evaluationsCount = fetchedAccounts.filter((a) => a.category === 'Evaluation').length;
+  const fundedCount = fetchedAccounts.filter((a) => a.status === 'Funded' || a.category === 'Funded').length;
+  const availableReward = fetchedAccounts.filter((a) => a.status === 'Funded').reduce((sum, a) => sum + Number(a.pnl || 0), 0);
+  const passedCount = fetchedAccounts.filter((a) => a.status === 'Passed').length;
+
   return (
     <div className="grid gap-6">
       <PageHeader
@@ -94,10 +187,10 @@ export function AccountsWorkspace() {
 
       <section aria-label="Account summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Active accounts", value: "3", detail: "2 evaluations · 1 funded", icon: WalletCards, tone: "text-primary" },
-          { label: "Total equity", value: "$258,450.90", detail: "Across active accounts", icon: CircleDollarSign, tone: "text-foreground" },
-          { label: "Available reward", value: "$2,840.00", detail: "Demo funded balance", icon: ShieldCheck, tone: "text-success" },
-          { label: "Passed accounts", value: "1", detail: "Archived separately", icon: CircleCheck, tone: "text-success" },
+          { label: "Active accounts", value: String(activeCount), detail: `${evaluationsCount} evaluations · ${fundedCount} funded`, icon: WalletCards, tone: "text-primary" },
+          { label: "Total equity", value: money(totalEquity), detail: "Across active accounts", icon: CircleDollarSign, tone: "text-foreground" },
+          { label: "Available reward", value: money(availableReward), detail: "Demo funded balance", icon: ShieldCheck, tone: "text-success" },
+          { label: "Passed accounts", value: String(passedCount), detail: "Archived separately", icon: CircleCheck, tone: "text-success" },
         ].map(({ label, value, detail, icon: Icon, tone }) => (
           <article key={label} className="rounded-tf-lg border border-border bg-card p-5">
             <div className="flex items-center justify-between">
