@@ -36,6 +36,8 @@ export function TopNavigation() {
   const [unreadNotifications, setUnreadNotifications] = useState(3);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [accountOptions, setAccountOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedAccountValue, setSelectedAccountValue] = useState("");
 
   // Listen for notification count changes from other components
   useEffect(() => {
@@ -58,6 +60,21 @@ export function TopNavigation() {
     });
 
     return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    function handleAccountsUpdated(event: Event) {
+      const detail = (event as CustomEvent<{ accounts?: Array<{ id: string; name: string }>; selectedAccountId?: string | null }>).detail;
+      if (detail?.accounts) {
+        setAccountOptions(detail.accounts);
+      }
+      if (typeof detail?.selectedAccountId !== "undefined") {
+        setSelectedAccountValue(detail.selectedAccountId ?? "");
+      }
+    }
+
+    window.addEventListener("tradeforge:accounts-updated", handleAccountsUpdated as EventListener);
+    return () => window.removeEventListener("tradeforge:accounts-updated", handleAccountsUpdated as EventListener);
   }, []);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
@@ -123,18 +140,27 @@ export function TopNavigation() {
               <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-primary ring-2 ring-background" />
             )}
           </Link>
-          <label className="hidden items-center gap-2 rounded-tf-md border border-border bg-surface px-3 text-xs text-muted-foreground xl:flex">
-            <span className="sr-only">Active account</span>
-            <select
-              aria-label="Active account"
-              defaultValue="TF-82104"
-              className="h-9 max-w-44 bg-transparent text-sm font-medium text-foreground outline-none"
-            >
-              <option value="TF-82104">Apex Evaluation 100K</option>
-              <option value="TF-91582">Apex Evaluation 50K</option>
-              <option value="TF-67144">Forge Funded 100K</option>
-            </select>
-          </label>
+          {accountOptions.length > 0 ? (
+            <label className="hidden items-center gap-2 rounded-tf-md border border-border bg-surface px-3 text-xs text-muted-foreground xl:flex">
+              <span className="sr-only">Active account</span>
+              <select
+                aria-label="Active account"
+                value={selectedAccountValue}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setSelectedAccountValue(nextValue);
+                  window.dispatchEvent(new CustomEvent("tradeforge:account-selected", { detail: { accountId: nextValue } }));
+                }}
+                className="h-9 max-w-44 bg-transparent text-sm font-medium text-foreground outline-none"
+              >
+                {accountOptions.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <details className="group relative">
             <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-tf-md p-1.5 text-left hover:bg-white/[.06] [&::-webkit-details-marker]:hidden">
               <span className="grid size-8 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
