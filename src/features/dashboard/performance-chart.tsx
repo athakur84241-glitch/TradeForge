@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -11,27 +11,55 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { performanceData } from "@/features/workspace/mock-data";
 import { cn } from "@/lib/utils";
 
-const ranges = ["7D", "1M", "3M"] as const;
+const ranges = ["1M", "3M"] as const;
 type Range = (typeof ranges)[number];
 
-const sliceByRange: Record<Range, number> = {
-  "7D": 7,
-  "1M": performanceData.length,
-  "3M": performanceData.length,
+type ChartPoint = {
+  date: string;
+  balance: number;
+  equity: number;
 };
 
-export function PerformanceChart() {
+type PerformanceChartProps = {
+  data?: ChartPoint[];
+  selectedAccount?: { name?: string | null; balance?: number | null; equity?: number | null } | null;
+};
+
+export function PerformanceChart({ data = [], selectedAccount }: PerformanceChartProps) {
   const [range, setRange] = useState<Range>("1M");
-  const points = performanceData.slice(-sliceByRange[range]);
+  const points = useMemo(() => {
+    const hasHistoricalSeries = data.length > 1 && data.some((point, index) => index > 0 && (point.balance !== data[0].balance || point.equity !== data[0].equity));
+
+    if (!hasHistoricalSeries) {
+      const startingBalance = selectedAccount?.balance ?? selectedAccount?.equity ?? 100000;
+      return [
+        { date: "Week 1", balance: startingBalance, equity: startingBalance },
+        { date: "Week 2", balance: startingBalance, equity: startingBalance },
+        { date: "Week 3", balance: startingBalance, equity: startingBalance },
+        { date: "Week 4", balance: startingBalance, equity: startingBalance },
+        { date: "Week 5", balance: startingBalance, equity: startingBalance },
+      ];
+    }
+
+    const maxItems = range === "3M" ? Math.max(data.length, 5) : Math.min(data.length, 5);
+    return data.slice(-maxItems);
+  }, [data, range, selectedAccount?.balance, selectedAccount?.equity]);
+
+  const chartTitle = selectedAccount?.name ? `${selectedAccount.name} balance vs equity` : "Balance vs equity";
+  const latestEquity = points.at(-1)?.equity ?? 0;
+  const latestBalance = points.at(-1)?.balance ?? 0;
+  const baseline = Math.max(latestEquity, latestBalance, selectedAccount?.balance ?? selectedAccount?.equity ?? 100000);
+  const spread = Math.max(10000, baseline * 0.2);
+  const domainMin = Math.max(0, baseline - spread);
+  const domainMax = baseline + spread;
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold">Balance vs equity</p>
+          <p className="text-sm font-semibold">{chartTitle}</p>
           <p className="mt-1 text-xs text-muted-foreground">Realised balance and live account equity</p>
         </div>
         <div className="flex rounded-tf-sm border border-border bg-surface p-1" role="group" aria-label="Chart range">
@@ -54,7 +82,7 @@ export function PerformanceChart() {
       <div
         className="financial-grid h-[300px] w-full rounded-tf-md border border-border/70 bg-background/40 p-2 sm:h-[340px]"
         role="img"
-        aria-label="Balance and equity performance chart. Equity closes at 104,486 dollars and balance closes at 104,261 dollars."
+        aria-label={`Balance and equity performance chart for ${selectedAccount?.name ?? "the selected account"}.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={points} margin={{ top: 18, right: 12, left: 4, bottom: 0 }}>
@@ -73,7 +101,7 @@ export function PerformanceChart() {
               minTickGap={28}
             />
             <YAxis
-              domain={["dataMin - 500", "dataMax + 500"]}
+              domain={[domainMin, domainMax]}
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
@@ -117,10 +145,10 @@ export function PerformanceChart() {
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-5 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2">
-          <span className="size-2 rounded-full bg-primary" /> Equity $104,486.20
+          <span className="size-2 rounded-full bg-primary" /> Equity {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(latestEquity)}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span className="size-2 rounded-full bg-success" /> Balance $104,260.80
+          <span className="size-2 rounded-full bg-success" /> Balance {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(latestBalance)}
         </span>
       </div>
     </div>
