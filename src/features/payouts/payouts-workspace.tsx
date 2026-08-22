@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   Banknote,
@@ -17,7 +17,8 @@ import { MetricCard } from "@/components/workspace/metric-card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
-import { payouts } from "@/features/workspace/mock-data";
+import { supabase } from "@/lib/supabase";
+
 import type { Payout } from "@/features/workspace/types";
 
 const payoutTabs = ["All", "Pending", "Completed", "Rejected"] as const;
@@ -33,14 +34,80 @@ function statusTone(status: Payout["status"]) {
   return "warning" as const;
 }
 
-function RequestPayoutDialog() {
+function RequestPayoutDialog({
+  onSubmitted,
+}: {
+  onSubmitted: () => void;
+}) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+const [submitError, setSubmitError] = useState<string | null>(null);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+
+  try {
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const formData = new FormData(event.currentTarget);
+
+    const amount = Number(formData.get("amount"));
+    const method = String(formData.get("method"));
+
+    if (!amount || amount < 100) {
+      throw new Error("Minimum payout amount is $100.");
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) throw userError;
+    if (!user) throw new Error("You must be logged in.");
+
+    // Get a funded account belonging to this user.
+    const { data: account, error: accountError } = await supabase
+  .from("accounts")
+  .select("id, account_name, status, user_id")
+  .eq("user_id", user.id)
+  .eq("status", "Funded")
+  .maybeSingle();
+
+console.log("DEBUG USER:", user.id);
+console.log("DEBUG ACCOUNT:", account);
+console.log("DEBUG ACCOUNT ERROR:", accountError);
+
+if (accountError) throw accountError;
+
+if (!account) {
+  throw new Error("Funded account was not found for this user.");
+}
+
+    const { error: payoutError } = await supabase
+      .from("payout_requests")
+      .insert({
+        user_id: user.id,
+        account_id: account.id,
+        amount,
+        method,
+        status: "Pending",
+        requested_at: new Date().toISOString(),
+        note: "Demo payout request",
+      });
+
+    if (payoutError) throw payoutError;
+
     setSubmitted(true);
+    onSubmitted();
+  } catch (error: any) {
+    console.error("Failed to submit payout:", error);
+    setSubmitError(error?.message ?? "Failed to submit payout.");
+  } finally {
+    setSubmitting(false);
   }
-
+}
   return (
     <Dialog.Root onOpenChange={(open) => !open && setSubmitted(false)}>
       <Dialog.Trigger asChild>
@@ -76,13 +143,22 @@ function RequestPayoutDialog() {
               <form onSubmit={submit} className="mt-6 grid gap-4">
                 <label className="grid gap-2 text-sm font-medium">
                   Amount
-                  <Input type="number" min="100" max="2840" defaultValue="840" required />
+                  <Input
+  name="amount"
+  type="number"
+  min="100"
+  defaultValue="840"
+  required
+/>
                   <span className="text-xs font-normal text-muted-foreground">Available demo reward: $2,840.00</span>
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
                   Payout method
-                  <select className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground" defaultValue="Bank transfer">
-                    <option>Bank transfer</option>
+                  <select
+  name="method"
+  className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground"
+  defaultValue="Bank transfer"
+>
                     <option>USDC</option>
                   </select>
                 </label>
@@ -104,6 +180,78 @@ function RequestPayoutDialog() {
 }
 
 export function PayoutsWorkspace() {
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+const [loading, setLoading] = useState(true);
+const [fetchError, setFetchError] = useState<string | null>(null);
+
+useEffect(() => {
+  let mounted = true;
+
+  async function loadPayouts() {
+    setLoading(true);
+    setFetchError(null);
+
+    try {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
+
+      if (userError) throw userError;
+
+      const user = userData.user;
+
+      if (!user) {
+        if (mounted) setPayouts([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("payout_requests")
+        .select(
+          "id, account_id, amount, method, status, requested_at, processed_at, note"
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: Payout[] = (data ?? []).map((row) => ({
+        id: row.id,
+        reference: `#${row.id.slice(0, 8).toUpperCase()}`,
+        requestedAt: new Date(row.requested_at).toLocaleDateString("en-GB"),
+        processedAt: row.processed_at
+          ? new Date(row.processed_at).toLocaleDateString("en-GB")
+          : "—",
+        method: row.method,
+        amount: Number(row.amount),
+        status: row.status as Payout["status"],
+        note: row.note ?? "—",
+      }));
+
+      if (mounted) setPayouts(mapped);
+    } catch (error: any) {
+     const errorMessage = JSON.stringify({
+  message: error?.message,
+  code: error?.code,
+  details: error?.details,
+  hint: error?.hint,
+});
+
+console.error("PAYOUT_ERROR", errorMessage);
+alert(errorMessage);
+      if (mounted) {
+        setFetchError(error?.message ?? "Failed to load payouts");
+      }
+    } finally {
+      if (mounted) setLoading(false);
+    }
+  }
+
+  loadPayouts();
+
+  return () => {
+    mounted = false;
+  };
+}, []);
   const [filter, setFilter] = useState<PayoutFilter>("All");
   const visible = useMemo(
     () => payouts.filter((payout) => filter === "All" || payout.status === filter),
@@ -118,7 +266,13 @@ export function PayoutsWorkspace() {
         eyebrow="Payouts"
         title="Payout centre"
         description="Review demo eligibility, payout methods, pending requests, and account history. No real payment processing is enabled."
-        action={<RequestPayoutDialog />}
+        action={
+  <RequestPayoutDialog
+    onSubmitted={() => {
+      window.location.reload();
+    }}
+  />
+}
       />
 
       <section aria-label="Payout summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
