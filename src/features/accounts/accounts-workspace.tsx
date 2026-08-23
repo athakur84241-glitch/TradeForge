@@ -89,7 +89,7 @@ export function AccountsWorkspace() {
 
         if (error) throw error;
 
-        const mapped: Account[] = (data || []).map((r: any) => ({
+        const mapped: Account[] = (data || []).map((r) => ({
           id: r.id,
           name: r.account_name,
           size: r.account_size ?? 0,
@@ -107,9 +107,11 @@ export function AccountsWorkspace() {
         }));
 
         if (mounted) setFetchedAccounts(mapped);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to load accounts', err);
-        if (mounted) setFetchError(err?.message ?? String(err));
+       if (mounted) {
+  setFetchError(err instanceof Error ? err.message : String(err));
+}
       } finally {
         if (mounted) setLoading(false);
       }

@@ -34,9 +34,9 @@ export default function ForgotPasswordPage() {
     // Derive the callback URL from the current window origin so this works
     // on localhost in development and on any deployment domain in production.
     const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/auth/update-password`
-        : "/auth/update-password";
+  typeof window !== "undefined"
+    ? `${window.location.origin}/auth/callback?next=/auth/update-password`
+    : "/auth/callback?next=/auth/update-password";
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email,

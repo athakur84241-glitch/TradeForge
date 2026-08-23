@@ -101,10 +101,14 @@ if (!account) {
 
     setSubmitted(true);
     onSubmitted();
-  } catch (error: any) {
-    console.error("Failed to submit payout:", error);
-    setSubmitError(error?.message ?? "Failed to submit payout.");
-  } finally {
+  } catch (error: unknown) {
+  console.error("Failed to submit payout:", error);
+
+  const message =
+    error instanceof Error ? error.message : "Failed to submit payout.";
+
+  setSubmitError(message);
+} finally {
     setSubmitting(false);
   }
 }
@@ -191,6 +195,11 @@ useEffect(() => {
     setLoading(true);
     setFetchError(null);
 
+    console.log(
+  "SUPABASE URL:",
+  process.env.NEXT_PUBLIC_SUPABASE_URL
+);
+
     try {
       const { data: userData, error: userError } =
         await supabase.auth.getUser();
@@ -204,13 +213,19 @@ useEffect(() => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("payout_requests")
-        .select(
-          "id, account_id, amount, method, status, requested_at, processed_at, note"
-        )
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+     const payoutQuery = supabase
+  .from("payout_requests")
+  .select(
+    "id, user_id, account_id, amount, method, status, requested_at, processed_at, note"
+  )
+  .eq("user_id", user.id)
+  .order("requested_at", { ascending: false });
+
+const { data, error } = await payoutQuery;
+
+console.log("PAYOUT DEBUG USER:", user.id);
+console.log("PAYOUT DEBUG DATA:", data);
+console.log("PAYOUT DEBUG ERROR:", error);
 
       if (error) throw error;
 
@@ -228,20 +243,31 @@ useEffect(() => {
       }));
 
       if (mounted) setPayouts(mapped);
-    } catch (error: any) {
-     const errorMessage = JSON.stringify({
-  message: error?.message,
-  code: error?.code,
-  details: error?.details,
-  hint: error?.hint,
-});
+    } catch (error: unknown) {
+  const supabaseError =
+    error && typeof error === "object"
+      ? error as {
+          message?: string;
+          code?: string;
+          details?: string;
+          hint?: string;
+        }
+      : {};
 
-console.error("PAYOUT_ERROR", errorMessage);
-alert(errorMessage);
-      if (mounted) {
-        setFetchError(error?.message ?? "Failed to load payouts");
-      }
-    } finally {
+  const errorMessage = JSON.stringify({
+    message: supabaseError.message,
+    code: supabaseError.code,
+    details: supabaseError.details,
+    hint: supabaseError.hint,
+  });
+
+  console.error("PAYOUT_ERROR", errorMessage);
+  alert(errorMessage);
+
+  if (mounted) {
+    setFetchError(supabaseError.message ?? "Failed to load payouts");
+  }
+}finally {
       if (mounted) setLoading(false);
     }
   }
@@ -254,9 +280,9 @@ alert(errorMessage);
 }, []);
   const [filter, setFilter] = useState<PayoutFilter>("All");
   const visible = useMemo(
-    () => payouts.filter((payout) => filter === "All" || payout.status === filter),
-    [filter],
-  );
+  () => payouts.filter((payout) => filter === "All" || payout.status === filter),
+  [payouts, filter],
+);
   const completed = payouts.filter((payout) => payout.status === "Completed");
   const paidTotal = completed.reduce((sum, payout) => sum + payout.amount, 0);
 
