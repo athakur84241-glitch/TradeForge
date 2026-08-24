@@ -189,6 +189,16 @@ export function PayoutsWorkspace() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
 const [loading, setLoading] = useState(true);
 const [fetchError, setFetchError] = useState<string | null>(null);
+const [fundedAccount, setFundedAccount] = useState<{
+  id: string;
+  account_name: string;
+  status: string;
+  balance: number;
+  equity: number;
+} | null>(null);
+
+const [eligibilityLoading, setEligibilityLoading] = useState(true);
+const [eligibilityError, setEligibilityError] = useState<string | null>(null);
 
 useEffect(() => {
   let mounted = true;
@@ -209,11 +219,28 @@ useEffect(() => {
       if (userError) throw userError;
 
       const user = userData.user;
-
       if (!user) {
-        if (mounted) setPayouts([]);
-        return;
-      }
+  if (mounted) {
+    setPayouts([]);
+    setFundedAccount(null);
+    setEligibilityLoading(false);
+  }
+  return;
+}
+
+const { data: account, error: accountError } = await supabase
+  .from("accounts")
+  .select("id, account_name, status, balance, equity")
+  .eq("user_id", user.id)
+  .eq("status", "Funded")
+  .maybeSingle();
+
+if (accountError) throw accountError;
+
+if (mounted) {
+  setFundedAccount(account);
+  setEligibilityLoading(false);
+}
 
      const payoutQuery = supabase
   .from("payout_requests")
@@ -287,6 +314,22 @@ console.log("PAYOUT DEBUG ERROR:", error);
 );
   const completed = payouts.filter((payout) => payout.status === "Completed");
   const paidTotal = completed.reduce((sum, payout) => sum + payout.amount, 0);
+  const availableReward = fundedAccount
+  ? Math.max(0, fundedAccount.equity - fundedAccount.balance)
+  : 0;
+
+const payoutEligible =
+  Boolean(fundedAccount) &&
+  fundedAccount!.status === "Funded" &&
+  availableReward >= 100;
+
+const eligibilityText = eligibilityLoading
+  ? "Checking..."
+  : eligibilityError
+    ? "Unable to verify"
+    : payoutEligible
+      ? "Eligible"
+      : "Not eligible";
 
   return (
     <div className="grid gap-6">
@@ -304,9 +347,68 @@ console.log("PAYOUT DEBUG ERROR:", error);
       />
 
       <section aria-label="Payout summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Available reward" value="_" detail="Loading account data" icon={CircleDollarSign} tone="primary" trend="flat" compact />
-        <MetricCard label="Next eligibility" value="_" detail="Calculating eligibility" icon={CalendarClock} tone="warning" trend="flat" compact />
-        <MetricCard label="Eligibility" value="_" detail="Checking account rules" icon={Clock3} tone="warning" trend="flat" compact />
+       <MetricCard
+  label="Available reward"
+  value={
+    fundedAccount
+      ? money(Math.max(0, fundedAccount.equity - fundedAccount.balance))
+      : "—"
+  }
+  detail={
+    eligibilityLoading
+      ? "Loading funded account"
+      : fundedAccount
+        ? "Based on your funded account"
+        : "No funded account found"
+  }
+  icon={CircleDollarSign}
+  tone="primary"
+  trend="flat"
+  compact
+/>
+       <MetricCard
+  label="Next eligibility"
+  value={
+    eligibilityLoading
+      ? "Checking..."
+      : payoutEligible
+        ? "Eligible now"
+        : "Not eligible"
+  }
+  detail={
+    eligibilityLoading
+      ? "Reviewing funded account"
+      : payoutEligible
+        ? "Current payout requirements met"
+        : "Minimum payout requirements not met"
+  }
+  icon={CalendarClock}
+  tone={payoutEligible ? "success" : "warning"}
+  trend="flat"
+  compact
+/>
+
+<MetricCard
+  label="Eligibility"
+  value={
+    eligibilityLoading
+      ? "Checking..."
+      : payoutEligible
+        ? "Eligible"
+        : "Not eligible"
+  }
+  detail={
+    eligibilityLoading
+      ? "Checking account rules"
+      : payoutEligible
+        ? "Current account rules met"
+        : "Account requirements not met"
+  }
+  icon={Clock3}
+  tone={payoutEligible ? "success" : "warning"}
+  trend="flat"
+  compact
+/>
         <MetricCard label="Completed total" value={money(paidTotal)} detail={`${completed.length} demo records`} icon={Banknote} tone="success" trend="up" compact />
       </section>
 
@@ -316,17 +418,33 @@ console.log("PAYOUT DEBUG ERROR:", error);
             <div className="rounded-tf-md border border-border bg-surface p-4">
   <p className="text-xs text-muted-foreground">Rule compliance</p>
   <p className="mt-2 text-sm font-semibold">
-    Checking account status
+  {eligibilityLoading
+  ? "Checking account status"
+  : payoutEligible
+    ? "Requirements met"
+    : "Requirements not met"}
   </p>
   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-    Payout eligibility will be calculated from your account data.
+   {eligibilityLoading
+  ? "Payout eligibility is being checked against your funded account."
+  : payoutEligible
+    ? "Your funded account currently meets the payout requirements."
+    : "Your funded account does not currently meet the payout requirements."}
   </p>
 </div>
             <div className="rounded-tf-md border border-border bg-surface p-4">
   <p className="text-xs text-muted-foreground">Next payout window</p>
-  <p className="mt-2 text-sm font-semibold">Calculating...</p>
+  <p className="mt-2 text-sm font-semibold">{eligibilityLoading
+  ? "Calculating..."
+  : payoutEligible
+    ? "Available for request"
+    : "Not available yet"}</p>
   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-    The next payout window will be shown when your account becomes eligible.
+    {eligibilityLoading
+  ? "Checking your funded account eligibility."
+  : payoutEligible
+    ? "Your account is currently eligible to request a payout."
+    : "Your account must meet the payout requirements before requesting a payout."}
   </p>
 </div>
           </div>
