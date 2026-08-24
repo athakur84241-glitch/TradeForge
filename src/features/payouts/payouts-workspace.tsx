@@ -377,18 +377,84 @@ console.log("PAYOUT DEBUG ERROR:", error);
               </tr>
             </thead>
             <tbody>
-              {visible.map((payout) => (
-                <tr key={payout.id} className="border-b border-border/70 last:border-0 hover:bg-white/[.025]">
-                  <td className="px-5 py-4 font-semibold text-foreground">{payout.reference}</td>
-                  <td className="px-5 py-4 text-muted-foreground">{payout.requestedAt}</td>
-                  <td className="px-5 py-4 text-muted-foreground">{payout.processedAt}</td>
-                  <td className="px-5 py-4 text-muted-foreground">{payout.method}</td>
-                  <td className="px-5 py-4 font-semibold">{money(payout.amount)}</td>
-                  <td className="px-5 py-4"><StatusBadge tone={statusTone(payout.status)}>{payout.status}</StatusBadge></td>
-                  <td className="max-w-xs px-5 py-4 text-muted-foreground">{payout.note}</td>
-                </tr>
-              ))}
-            </tbody>
+  {loading ? (
+    <tr>
+      <td
+        colSpan={7}
+        className="px-5 py-10 text-center text-sm text-muted-foreground"
+      >
+        Loading payout history...
+      </td>
+    </tr>
+  ) : fetchError ? (
+    <tr>
+      <td
+        colSpan={7}
+        className="px-5 py-10 text-center"
+      >
+        <p className="text-sm font-semibold text-danger">
+          Unable to load payout history
+        </p>
+
+        <p className="mt-2 text-xs text-muted-foreground">
+          {fetchError}
+        </p>
+      </td>
+    </tr>
+  ) : visible.length === 0 ? (
+    <tr>
+      <td
+        colSpan={7}
+        className="px-5 py-10 text-center"
+      >
+        <p className="text-sm font-semibold">
+          No payout requests found
+        </p>
+
+        <p className="mt-2 text-xs text-muted-foreground">
+          Your payout requests will appear here once submitted.
+        </p>
+      </td>
+    </tr>
+  ) : (
+    visible.map((payout) => (
+      <tr
+        key={payout.id}
+        className="border-b border-border/70 last:border-0 hover:bg-white/[.025]"
+      >
+        <td className="px-5 py-4 font-semibold text-foreground">
+          {payout.reference}
+        </td>
+
+        <td className="px-5 py-4 text-muted-foreground">
+          {payout.requestedAt}
+        </td>
+
+        <td className="px-5 py-4 text-muted-foreground">
+          {payout.processedAt}
+        </td>
+
+        <td className="px-5 py-4 text-muted-foreground">
+          {payout.method}
+        </td>
+
+        <td className="px-5 py-4 font-semibold">
+          {money(payout.amount)}
+        </td>
+
+        <td className="px-5 py-4">
+          <StatusBadge tone={statusTone(payout.status)}>
+            {payout.status}
+          </StatusBadge>
+        </td>
+
+        <td className="max-w-xs px-5 py-4 text-muted-foreground">
+          {payout.note}
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
           </table>
         </div>
       </SectionCard>
