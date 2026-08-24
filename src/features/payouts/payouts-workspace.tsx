@@ -94,7 +94,7 @@ if (!account) {
         method,
         status: "Pending",
         requested_at: new Date().toISOString(),
-        note: "Demo payout request",
+        note: "Payout request submitted by trader",
       });
 
     if (payoutError) throw payoutError;
@@ -130,9 +130,9 @@ if (!account) {
               <span className="mx-auto grid size-12 place-items-center rounded-full bg-success/15 text-success">
                 <Check className="size-6" />
               </span>
-              <Dialog.Title className="mt-4 font-display text-xl font-semibold">Demo request recorded</Dialog.Title>
+              <Dialog.Title className="mt-4 font-display text-xl font-semibold">  Payout request submitted</Dialog.Title>
               <Dialog.Description className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-                No payout was sent. A compliant backend and eligibility review are required before this can process real funds.
+                Your payout request has been submitted and is now pending review.
               </Dialog.Description>
               <Dialog.Close asChild>
                 <Button className="mt-6">Return to payouts</Button>
@@ -142,7 +142,7 @@ if (!account) {
             <>
               <Dialog.Title className="pr-12 font-display text-xl font-semibold">Request payout</Dialog.Title>
               <Dialog.Description className="mt-2 text-sm leading-6 text-muted-foreground">
-                Frontend demo only. This form does not transfer funds or create a real request.
+                 Submit a payout request using your available payout balance. Requests are subject to eligibility and review.
               </Dialog.Description>
               <form onSubmit={submit} className="mt-6 grid gap-4">
                 <label className="grid gap-2 text-sm font-medium">
@@ -154,14 +154,14 @@ if (!account) {
   defaultValue="840"
   required
 />
-                  <span className="text-xs font-normal text-muted-foreground">Available demo reward: $2,840.00</span>
+                  
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
                   Payout method
                   <select
   name="method"
   className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground"
-  defaultValue="Bank transfer"
+  defaultValue="USDC"
 >
                     <option>USDC</option>
                   </select>
@@ -172,7 +172,9 @@ if (!account) {
                 </label>
                 <div className="mt-2 flex justify-end gap-3">
                   <Dialog.Close asChild><Button variant="ghost">Cancel</Button></Dialog.Close>
-                  <Button type="submit">Submit demo request</Button>
+                  <Button type="submit" disabled={submitting}>
+  {submitting ? "Submitting..." : "Submit demo request"}
+</Button>
                 </div>
               </form>
             </>
@@ -302,47 +304,62 @@ console.log("PAYOUT DEBUG ERROR:", error);
       />
 
       <section aria-label="Payout summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Available reward" value="$2,840.00" detail="Demo funded account" icon={CircleDollarSign} tone="primary" trend="up" compact />
-        <MetricCard label="Next eligibility" value="28 Jul 2026" detail="4 calendar days" icon={CalendarClock} tone="warning" trend="flat" compact />
-        <MetricCard label="Eligibility" value="Eligible soon" detail="All current risk rules met" icon={Clock3} tone="success" trend="flat" compact />
+        <MetricCard label="Available reward" value="_" detail="Loading account data" icon={CircleDollarSign} tone="primary" trend="flat" compact />
+        <MetricCard label="Next eligibility" value="_" detail="Calculating eligibility" icon={CalendarClock} tone="warning" trend="flat" compact />
+        <MetricCard label="Eligibility" value="_" detail="Checking account rules" icon={Clock3} tone="warning" trend="flat" compact />
         <MetricCard label="Completed total" value={money(paidTotal)} detail={`${completed.length} demo records`} icon={Banknote} tone="success" trend="up" compact />
       </section>
 
       <div className="grid gap-6 xl:grid-cols-12">
-        <SectionCard title="Eligibility status" description="Mock frontend calculation based on current demo data." className="xl:col-span-7">
+        <SectionCard title="Eligibility status" description="Your current payout eligibility based on account rules." className="xl:col-span-7">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-tf-md border border-success/20 bg-success/10 p-4">
-              <p className="text-xs text-muted-foreground">Rule compliance</p>
-              <p className="mt-2 text-sm font-semibold text-success">Requirements met</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">No active daily or overall loss breach.</p>
-            </div>
             <div className="rounded-tf-md border border-border bg-surface p-4">
-              <p className="text-xs text-muted-foreground">Next payout window</p>
-              <p className="mt-2 text-sm font-semibold">28 July 2026</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">Eligibility opens after the demo waiting period.</p>
-            </div>
+  <p className="text-xs text-muted-foreground">Rule compliance</p>
+  <p className="mt-2 text-sm font-semibold">
+    Checking account status
+  </p>
+  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+    Payout eligibility will be calculated from your account data.
+  </p>
+</div>
+            <div className="rounded-tf-md border border-border bg-surface p-4">
+  <p className="text-xs text-muted-foreground">Next payout window</p>
+  <p className="mt-2 text-sm font-semibold">Calculating...</p>
+  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+    The next payout window will be shown when your account becomes eligible.
+  </p>
+</div>
           </div>
           <div className="mt-4 flex items-start gap-3 rounded-tf-md border border-warning/20 bg-warning/10 p-4">
             <Clock3 className="mt-0.5 size-5 shrink-0 text-warning" />
             <p className="text-sm leading-6 text-muted-foreground">
-              Payout values and eligibility are illustrative. A compliant backend, identity checks, and manual review would be required in production.
+               Payout requests are subject to TradeForge eligibility rules and review.
             </p>
           </div>
         </SectionCard>
 
-        <SectionCard title="Payout method" description="Primary demo disbursement profile." className="xl:col-span-5">
-          <div className="flex items-center gap-4 rounded-tf-md border border-border bg-surface p-4">
-            <span className="grid size-11 place-items-center rounded-tf-md bg-primary/10 text-primary">
-              <Landmark className="size-5" />
-            </span>
-            <div>
-              <p className="font-semibold">Bank transfer</p>
-              <p className="mt-1 text-sm text-muted-foreground">Barclays · ending 4821</p>
-            </div>
-            <StatusBadge tone="success">Verified demo</StatusBadge>
-          </div>
-          <Button type="button" variant="outline" className="mt-4 w-full">Manage demo method</Button>
-        </SectionCard>
+        <SectionCard
+  title="Payout method"
+  description="Select an available payout method when submitting a request."
+  className="xl:col-span-5"
+>
+  <div className="rounded-tf-md border border-border bg-surface p-4">
+    <div className="flex items-center gap-4">
+      <span className="grid size-11 place-items-center rounded-tf-md bg-primary/10 text-primary">
+        <Landmark className="size-5" />
+      </span>
+
+      <div>
+        <p className="font-semibold">USDC</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Available for payout requests
+        </p>
+      </div>
+
+      <StatusBadge tone="success">Available</StatusBadge>
+    </div>
+  </div>
+</SectionCard>
       </div>
 
       <SectionCard
