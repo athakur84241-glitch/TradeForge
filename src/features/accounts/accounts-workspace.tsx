@@ -191,7 +191,7 @@ export function AccountsWorkspace() {
         {[
           { label: "Active accounts", value: String(activeCount), detail: `${evaluationsCount} evaluations · ${fundedCount} funded`, icon: WalletCards, tone: "text-primary" },
           { label: "Total equity", value: money(totalEquity), detail: "Across active accounts", icon: CircleDollarSign, tone: "text-foreground" },
-          { label: "Available reward", value: money(availableReward), detail: "Demo funded balance", icon: ShieldCheck, tone: "text-success" },
+          { label: "Available reward", value: money(availableReward), detail: "Across funded accounts", icon: ShieldCheck, tone: "text-success" },
           { label: "Passed accounts", value: String(passedCount), detail: "Archived separately", icon: CircleCheck, tone: "text-success" },
         ].map(({ label, value, detail, icon: Icon, tone }) => (
           <article key={label} className="rounded-tf-lg border border-border bg-card p-5">
@@ -209,7 +209,9 @@ export function AccountsWorkspace() {
         <div className="flex flex-col gap-4 border-b border-border p-5">
           <div>
             <h2 id="account-list-title" className="text-base font-semibold">Account workspace</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Search, filter, sort, and review every demo account state.</p>
+           <p className="mt-1 text-sm text-muted-foreground">
+  Search, filter, sort, and review your trading accounts.
+</p>
           </div>
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <label className="relative flex-1">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Search, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { challengeModels } from "@/features/workspace/mock-data";
@@ -14,7 +15,7 @@ function money(value: number) {
 export function ChallengeModels() {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState("All sizes");
-  const [selected, setSelected] = useState<string | null>(null);
+  
 
   const visible = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -89,13 +90,14 @@ export function ChallengeModels() {
                 Sizes: {model.sizes.map(money).join(" · ")}
               </p>
               <Button
-                type="button"
-                variant={model.recommended ? "primary" : "outline"}
-                className="mt-5 w-full"
-                onClick={() => setSelected(model.id)}
-              >
-                {selected === model.id ? "Demo selection saved" : "Review model"}
-              </Button>
+  asChild
+  variant={model.recommended ? "primary" : "outline"}
+  className="mt-5 w-full"
+>
+  <Link href={`/challenges/${model.id}/${model.sizes[0]}`}>
+    Review model
+  </Link>
+</Button>
             </article>
           ))}
         </div>
