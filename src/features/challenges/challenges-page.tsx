@@ -16,13 +16,14 @@ import { ProgressBar } from "@/components/workspace/progress-bar";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import { challenges } from "@/features/workspace/mock-data";
+import type { ChallengePlan } from "./challenge-catalogue";
 import { ChallengeModels } from "./challenge-models";
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 }
 
-export function ChallengesPage() {
+export function ChallengesPage({ challengeCatalogue }: { challengeCatalogue: ChallengePlan[] }) {
   const active = challenges[0];
 
   return (
@@ -146,7 +147,7 @@ export function ChallengesPage() {
       </SectionCard>
 
       <SectionCard title="Available challenge models" description="Compare account sizes and rules before selecting a demo model." contentClassName="p-0">
-        <ChallengeModels />
+        <ChallengeModels challengeModels={challengeCatalogue} />
       </SectionCard>
     </div>
   );

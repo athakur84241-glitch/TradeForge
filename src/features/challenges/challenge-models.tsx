@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { challengeModels } from "@/features/workspace/mock-data";
+import type { ChallengePlan } from "./challenge-catalogue";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/workspace/status-badge";
 
@@ -12,7 +12,7 @@ function money(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 }
 
-export function ChallengeModels() {
+export function ChallengeModels({ challengeModels }: { challengeModels: ChallengePlan[] }) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState("All sizes");
   
@@ -24,7 +24,7 @@ export function ChallengeModels() {
       const sizeMatch = size === "All sizes" || model.sizes.includes(Number(size));
       return queryMatch && sizeMatch;
     });
-  }, [query, size]);
+  }, [challengeModels, query, size]);
 
   return (
     <div>
@@ -48,7 +48,7 @@ export function ChallengeModels() {
             className="h-10 min-w-48 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground"
           >
             <option>All sizes</option>
-            {[10000, 25000, 50000, 100000, 200000].map((amount) => (
+            {[5000, 10000, 25000, 50000, 100000].map((amount) => (
               <option key={amount} value={amount}>{money(amount)}</option>
             ))}
           </select>

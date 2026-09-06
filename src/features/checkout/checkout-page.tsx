@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useState } from "react";
 import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/workspace/status-badge";
-import { challengeModels } from "@/features/workspace/mock-data";
+import type { ChallengePlan } from "@/features/challenges/challenge-catalogue";
+import { createPendingOrder, type PendingOrder } from "@/features/orders/order-service";
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -15,37 +16,26 @@ function money(value: number) {
   }).format(value);
 }
 
-export function CheckoutPage() {
-  const params = useParams();
+export function CheckoutPage({ model }: { model: ChallengePlan }) {
+  const size = model.accountSize;
+  const [order, setOrder] = useState<PendingOrder | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
-  const modelId = String(params.modelId);
-  const size = Number(params.size);
+  async function handleCreateOrder() {
+    if (isCreatingOrder || order) return;
 
-  const model = challengeModels.find(
-    (item) => item.id === modelId && item.sizes.includes(size),
-  );
+    setIsCreatingOrder(true);
+    setOrderError(null);
 
-  if (!model) {
-    return (
-      <main className="min-h-[calc(100vh-4rem)] p-5 sm:p-8">
-        <div className="mx-auto max-w-3xl rounded-tf-lg border border-border bg-surface p-8 text-center">
-          <ShieldCheck className="mx-auto size-10 text-primary" />
-          <h1 className="mt-4 text-2xl font-semibold">
-            Evaluation not found
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            The selected challenge model or account size is no longer
-            available.
-          </p>
-          <Link href="/challenges">
-            <Button className="mt-6">
-              <ArrowLeft className="mr-2 size-4" />
-              Back to challenges
-            </Button>
-          </Link>
-        </div>
-      </main>
-    );
+    try {
+      const pendingOrder = await createPendingOrder(model.planId);
+      setOrder(pendingOrder);
+    } catch (error) {
+      setOrderError(error instanceof Error ? error.message : "Unable to create order.");
+    } finally {
+      setIsCreatingOrder(false);
+    }
   }
 
   return (
@@ -182,22 +172,33 @@ export function CheckoutPage() {
                   Next step
                 </p>
                 <p className="mt-2 text-sm">
-                  Continue to the payment step to complete this evaluation.
+                  Create your pending order before continuing to payment.
                 </p>
               </div>
 
               <Button
                 type="button"
                 className="mt-5 w-full"
-                disabled
+                disabled={isCreatingOrder || Boolean(order)}
+                onClick={handleCreateOrder}
               >
-                Payment integration next
+                {isCreatingOrder ? "Creating order..." : order ? "Order created" : "Create pending order"}
               </Button>
 
-              <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
-                Payment processing will be connected after the checkout flow
-                is verified.
-              </p>
+              {order ? (
+                <p className="mt-3 text-center text-xs leading-5 text-success">
+                  Pending order created: {order.id}
+                </p>
+              ) : orderError ? (
+                <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
+                  {orderError}
+                </p>
+              ) : (
+                <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
+                  Payment processing will be connected after the checkout flow
+                  is verified.
+                </p>
+              )}
             </div>
           </aside>
         </div>

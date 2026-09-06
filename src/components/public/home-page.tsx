@@ -16,6 +16,7 @@ import {
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { ChallengePlan } from "@/features/challenges/challenge-catalogue";
 
 const whyItems = [
   {
@@ -40,7 +41,8 @@ const whyItems = [
   },
 ];
 
-const challengeData: Record<"1-Step" | "2-Step" | "Instant Funding", Array<{
+/* Legacy catalogue data retained below only as historical reference; the rendered catalogue comes from Supabase. */
+const legacyChallengeData: Record<"1-Step" | "2-Step" | "Instant Funding", Array<{
   size: string;
   price: string;
   profitTarget: string;
@@ -331,6 +333,8 @@ const challengeData: Record<"1-Step" | "2-Step" | "Instant Funding", Array<{
   ],
 };
 
+void legacyChallengeData;
+
 const chartData = [
   { name: "00:00", value: 42 },
   { name: "02:00", value: 45 },
@@ -596,7 +600,7 @@ function ChallengeCard({ model, item }: { model: ChallengeModel; item: PlanItem 
     </article>
   );
 }
-export function HomePage() {
+export function HomePage({ challengeCatalogue }: { challengeCatalogue: ChallengePlan[] }) {
   const [activeTab, setActiveTab] = useState<ChallengeModel>("1-Step");
 
   return (
@@ -757,7 +761,22 @@ export function HomePage() {
 
           <div className="mt-10">
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 items-start">
-              {challengeData[activeTab].map((item) => (
+              {challengeCatalogue
+                .filter((plan) => plan.name === activeTab)
+                .flatMap((plan) => plan.sizes.map((accountSize) => ({
+                  size: `$${accountSize / 1000}K`,
+                  price: `$${(plan.pricesBySize[accountSize] / 100).toFixed(0)}`,
+                  profitTarget: plan.profitTarget,
+                  profitSplit: plan.profitSplit,
+                  dailyLoss: plan.dailyLossLimit,
+                  overallLoss: plan.overallLossLimit,
+                  minDays: plan.tradingDays,
+                  payoutFreq: plan.payoutFrequency,
+                  trailingDrawdown: plan.trailingDrawdown ?? undefined,
+                  payoutEligibility: plan.payoutEligibility ?? undefined,
+                  secondaryRules: [],
+                })))
+                .map((item) => (
                 <ChallengeCard key={item.size} model={activeTab} item={item} />
               ))}
             </div>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
-import { challengeModels } from "@/features/workspace/mock-data";
+import { getChallengePlan } from "@/features/challenges/challenge-catalogue";
 
 type PageProps = {
   params: Promise<{
@@ -19,7 +19,7 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { modelId, size } = await params;
-  const model = challengeModels.find((item) => item.id === modelId);
+  const model = await getChallengePlan(modelId, Number(size));
 
   return {
     title: model ? `${model.name} · $${Number(size).toLocaleString()}` : "Challenge",
@@ -29,10 +29,10 @@ export async function generateMetadata({
 export default async function Page({ params }: PageProps) {
   const { modelId, size } = await params;
 
-  const model = challengeModels.find((item) => item.id === modelId);
   const accountSize = Number(size);
+  const model = await getChallengePlan(modelId, accountSize);
 
-  if (!model || !model.sizes.includes(accountSize)) {
+  if (!model) {
     notFound();
   }
 
