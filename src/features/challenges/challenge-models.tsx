@@ -60,8 +60,10 @@ export function ChallengeModels({ challengeModels }: { challengeModels: Challeng
       </div>
       {visible.length ? (
         <div className="grid gap-4 p-5 lg:grid-cols-3">
-          {visible.map((model) => (
-            <article
+          {visible.map((model) => {
+            const filteredSize = size === "All sizes" ? null : Number(size);
+            const selectedSize = selectedSizes[model.slug] ?? (filteredSize !== null && model.sizes.includes(filteredSize) ? filteredSize : model.sizes.at(0));
+            return <article
               key={model.id}
               className={cn(
                 "flex flex-col rounded-tf-lg border bg-surface p-5",
@@ -96,7 +98,7 @@ export function ChallengeModels({ challengeModels }: { challengeModels: Challeng
               <label className="mt-4 grid gap-2 text-sm font-medium">
                 Account size
                 <select
-                  value={selectedSizes[model.slug] ?? model.sizes[0]}
+                  value={selectedSize}
                   onChange={(event) => setSelectedSizes((current) => ({ ...current, [model.slug]: Number(event.target.value) }))}
                   className="h-10 rounded-tf-md border border-border bg-background px-3 text-sm text-foreground"
                 >
@@ -106,7 +108,7 @@ export function ChallengeModels({ challengeModels }: { challengeModels: Challeng
                 </select>
               </label>
               <p className="mt-3 text-sm font-semibold">
-                {money((model.pricesBySize[selectedSizes[model.slug] ?? model.sizes[0]] ?? 0) / 100)}
+                {money((model.pricesBySize[selectedSize ?? 0] ?? 0) / 100)}
                 <span className="ml-1 text-xs font-normal text-muted-foreground">{model.currency}</span>
               </p>
               <Button
@@ -114,12 +116,12 @@ export function ChallengeModels({ challengeModels }: { challengeModels: Challeng
                 variant={model.recommended ? "primary" : "outline"}
                 className="mt-5 w-full"
               >
-                <Link href={`/challenges/${model.slug}/${selectedSizes[model.slug] ?? model.sizes[0]}`}>
+                <Link href={`/challenges/${model.slug}/${selectedSize}`}>
                   Review model
                 </Link>
               </Button>
-            </article>
-          ))}
+            </article>;
+          })}
         </div>
       ) : (
         <div className="grid min-h-48 place-items-center p-6 text-center">

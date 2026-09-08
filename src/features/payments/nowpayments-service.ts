@@ -12,6 +12,8 @@ export type NowPaymentsRequest = {
   paymentId: string;
   paymentCurrency: string;
   paymentAmount: string;
+  paymentAmountAtomic: string;
+  exchangeRate: string | null;
   paymentAddress: string;
   expiresAt: string;
 };
@@ -73,18 +75,45 @@ export async function createNowPaymentsRequest(input: {
     pay_currency?: string;
     pay_amount?: string;
     pay_address?: string;
+    price_amount?: string | number;
     expiration_estimate_date?: string;
   };
   if (!data.payment_id || !data.pay_currency || !data.pay_amount || !data.pay_address) {
     throw new Error("NOWPayments returned an incomplete payment request.");
   }
+  const decimals = input.method === "SOL_SOLANA" ? 9 : 6;
+  const paymentAmountAtomic = decimalToAtomic(data.pay_amount, decimals);
+  const exchangeRate = data.price_amount ? calculateExchangeRate(String(data.price_amount), data.pay_amount) : null;
   return {
     paymentId: String(data.payment_id),
     paymentCurrency: data.pay_currency,
     paymentAmount: data.pay_amount,
+    paymentAmountAtomic,
+    exchangeRate,
     paymentAddress: data.pay_address,
     expiresAt: data.expiration_estimate_date ?? new Date(Date.now() + 30 * 60 * 1000).toISOString(),
   };
+}
+
+export function decimalToAtomic(value: string, decimals: number) {
+  if (!/^\d+(?:\.\d+)?$/.test(value)) throw new Error("Invalid provider amount.");
+  const [whole, fraction = ""] = value.split(".");
+  if (fraction.length > decimals) throw new Error("Provider amount has excessive precision.");
+  return BigInt(`${whole}${fraction.padEnd(decimals, "0")}`).toString();
+}
+
+function calculateExchangeRate(fiatAmount: string, cryptoAmount: string) {
+  if (!/^\d+(?:\.\d+)?$/.test(fiatAmount) || !/^\d+(?:\.\d+)?$/.test(cryptoAmount)) return null;
+  const [fiatWhole, fiatFraction = ""] = fiatAmount.split(".");
+  const [cryptoWhole, cryptoFraction = ""] = cryptoAmount.split(".");
+  const fiatScale = fiatFraction.length;
+  const cryptoScale = cryptoFraction.length;
+  const numerator = BigInt(`${fiatWhole}${fiatFraction}`) * 10n ** BigInt(cryptoScale + 18);
+  const denominator = BigInt(`${cryptoWhole}${cryptoFraction}`) * 10n ** BigInt(fiatScale);
+  if (denominator === 0n) return null;
+  const scaled = numerator / denominator;
+  const text = scaled.toString().padStart(19, "0");
+  return `${text.slice(0, -18)}.${text.slice(-18)}`;
 }
 
 function sortObject(value: unknown): unknown {

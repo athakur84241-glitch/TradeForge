@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/features/payments/payment-config";
 import { activateVerifiedPayment } from "@/features/payments/crypto-payment-service";
-import { getNowPaymentsCurrency, isFailedNowPaymentsStatus, isSuccessfulNowPaymentsStatus, verifyNowPaymentsSignature, type NowPaymentsIpn } from "@/features/payments/nowpayments-service";
-
-function decimalToAtomic(value: string, decimals: number) {
-  if (!/^\d+(?:\.\d+)?$/.test(value)) throw new Error("Invalid provider amount.");
-  const [whole, fraction = ""] = value.split(".");
-  if (fraction.length > decimals) throw new Error("Provider amount has excessive precision.");
-  return BigInt(`${whole}${fraction.padEnd(decimals, "0")}`).toString();
-}
+import { decimalToAtomic, getNowPaymentsCurrency, isFailedNowPaymentsStatus, isSuccessfulNowPaymentsStatus, verifyNowPaymentsSignature, type NowPaymentsIpn } from "@/features/payments/nowpayments-service";
 
 function methodForCurrency(currency: string) {
   return PAYMENT_METHODS.find((method) => getNowPaymentsCurrency(method) === currency) as PaymentMethod | undefined;

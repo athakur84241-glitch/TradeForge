@@ -96,7 +96,7 @@ export async function createCryptoPaymentRequest(orderId: string, method: string
   const expected = isReusable
     ? { amount: order.expected_amount, atomic: order.expected_amount_atomic }
     : nowPayment
-      ? { amount: nowPayment.paymentAmount, atomic: null }
+      ? { amount: nowPayment.paymentAmount, atomic: nowPayment.paymentAmountAtomic }
       : calculateExpectedAmount(order.amount_cents, config!);
   const paymentAddress = isReusable ? order.payment_address : nowPayment?.paymentAddress ?? config?.address;
   const paymentNetwork = isReusable ? order.payment_network : nowPayment?.paymentCurrency ?? config?.network;
@@ -112,7 +112,7 @@ export async function createCryptoPaymentRequest(orderId: string, method: string
       payment_address: paymentAddress,
       expected_amount: expected.amount,
       expected_amount_atomic: expected.atomic,
-      exchange_rate: nowPayment ? null : config?.rateUsd,
+      exchange_rate: nowPayment?.exchangeRate ?? (config?.rateUsd ?? null),
       rate_timestamp: new Date().toISOString(),
       payment_reference: paymentReference,
       payment_expires_at: paymentExpiresAt,
@@ -149,7 +149,20 @@ export async function getOrderPaymentStatus(orderId: string): Promise<Pick<Pendi
   const { data, error } = await supabase.from("orders").select("id, status, payment_expires_at").eq("id", orderId).eq("user_id", user.id).single();
   if (error || !data) throw new Error("Order not found.");
   const isExpired = data.payment_expires_at && new Date(data.payment_expires_at).getTime() <= Date.now();
+  if (isExpired && data.status === "payment_pending") {
+    const admin = createSupabaseAdminClient();
+    await admin.from("orders").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", data.id).eq("status", "payment_pending");
+  }
   return { id: data.id, status: isExpired && data.status === "payment_pending" ? "expired" : data.status, expiresAt: data.payment_expires_at };
+}
+
+export async function cancelOrder(orderId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw new Error("You must be logged in to cancel an order.");
+  const { data, error } = await supabase.rpc("cancel_user_order", { target_order_id: orderId });
+  if (error || !data) throw new Error("This order cannot be cancelled.");
+  return data;
 }
 
 export async function getUserOrders(): Promise<PendingOrder[]> {

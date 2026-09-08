@@ -5,6 +5,12 @@ export type TradingAccountSnapshot = {
   provider: string;
 };
 
+export type TradingAccountProvision = {
+  providerAccountId: string;
+  platform: string;
+  status: "active";
+};
+
 export type ProviderTrade = {
   externalTradeId: string;
   symbol: string;
@@ -32,9 +38,14 @@ export type ProviderPosition = {
 
 export interface TradingProvider {
   readonly name: string;
-  getAccountSnapshot(providerAccountId: string): Promise<TradingAccountSnapshot>;
-  getClosedTrades(providerAccountId: string): Promise<ProviderTrade[]>;
-  getOpenPositions(providerAccountId: string): Promise<ProviderPosition[]>;
+  createAccount(input: { userId: string; accountSize: string; phase: string }): Promise<TradingAccountProvision>;
+  disableAccount(providerAccountId: string): Promise<void>;
+  getAccount(providerAccountId: string): Promise<TradingAccountSnapshot>;
+  getBalance(providerAccountId: string): Promise<string>;
+  getEquity(providerAccountId: string): Promise<string>;
+  getPositions(providerAccountId: string): Promise<ProviderPosition[]>;
+  getTrades(providerAccountId: string): Promise<ProviderTrade[]>;
+  getDailyMetrics(providerAccountId: string): Promise<{ metricDate: string; dailyPnl: string; tradingDay: boolean }[]>;
 }
 
 export class UnavailableTradingProvider implements TradingProvider {
@@ -42,9 +53,14 @@ export class UnavailableTradingProvider implements TradingProvider {
   private unavailable(): never {
     throw new Error("Trading integration is not configured.");
   }
-  getAccountSnapshot(): Promise<TradingAccountSnapshot> { return Promise.reject(this.unavailable()); }
-  getClosedTrades(): Promise<ProviderTrade[]> { return Promise.reject(this.unavailable()); }
-  getOpenPositions(): Promise<ProviderPosition[]> { return Promise.reject(this.unavailable()); }
+  createAccount(): Promise<TradingAccountProvision> { return Promise.reject(this.unavailable()); }
+  disableAccount(): Promise<void> { return Promise.reject(this.unavailable()); }
+  getAccount(): Promise<TradingAccountSnapshot> { return Promise.reject(this.unavailable()); }
+  getBalance(): Promise<string> { return Promise.reject(this.unavailable()); }
+  getEquity(): Promise<string> { return Promise.reject(this.unavailable()); }
+  getPositions(): Promise<ProviderPosition[]> { return Promise.reject(this.unavailable()); }
+  getTrades(): Promise<ProviderTrade[]> { return Promise.reject(this.unavailable()); }
+  getDailyMetrics(): Promise<{ metricDate: string; dailyPnl: string; tradingDay: boolean }[]> { return Promise.reject(this.unavailable()); }
 }
 
 export function getTradingProvider(): TradingProvider {

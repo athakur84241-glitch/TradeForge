@@ -20,6 +20,32 @@ function percentValue(value: string | null) {
   return match ? match[1] : null;
 }
 
+const SCALE = 18n;
+const SCALE_UNIT = 10n ** SCALE;
+
+function scaled(value: string | number | null | undefined) {
+  const [whole, fraction = ""] = String(value ?? "0").split(".");
+  const normalized = fraction.replace(/[^0-9]/g, "").slice(0, Number(SCALE)).padEnd(Number(SCALE), "0");
+  return BigInt(`${whole.replace(/[^0-9-]/g, "") || "0"}${normalized}`);
+}
+
+function percentLimit(startingBalance: bigint, percent: string) {
+  return startingBalance * scaled(percent) / (100n * SCALE_UNIT);
+}
+
+function decimalFromScaled(value: bigint) {
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const text = absolute.toString().padStart(Number(SCALE) + 1, "0");
+  return `${negative ? "-" : ""}${text.slice(0, -Number(SCALE))}.${text.slice(-Number(SCALE)).replace(/0+$/, "") || "0"}`;
+}
+
+function ratioPercent(value: bigint, target: bigint) {
+  if (target <= 0n) return "0.00";
+  const basisPoints = value * 10000n / target;
+  return `${basisPoints / 100n}.${(basisPoints % 100n).toString().padStart(2, "0")}`;
+}
+
 export async function evaluateAccountRules(accountId: string): Promise<RuleEvaluation> {
   const admin = createSupabaseAdminClient();
   const { data: account, error } = await admin.from("accounts").select("id, starting_balance, pnl, provider_account_id, challenge_plan_id, status").eq("id", accountId).single();
@@ -31,21 +57,28 @@ export async function evaluateAccountRules(accountId: string): Promise<RuleEvalu
   const targetPercent = percentValue(plan.profit_target) ?? "0";
   const dailyLimitPercent = percentValue(plan.daily_loss) ?? "0";
   const overallLimitPercent = percentValue(plan.overall_loss) ?? "0";
-  const starting = Number(account.starting_balance ?? 0);
-  const profit = Number(currentProfit);
-  const target = starting * Number(targetPercent) / 100;
+  const starting = scaled(account.starting_balance);
+  const profit = scaled(currentProfit);
+  const target = percentLimit(starting, targetPercent);
   const tradingDays = (metrics ?? []).filter((metric) => metric.trading_day).length;
   const breach = (metrics ?? []).find((metric) => metric.breach_type);
-  const breached = Boolean(breach) || Number(metrics?.[0]?.daily_loss_used ?? 0) > starting * Number(dailyLimitPercent) / 100 || Number(metrics?.[0]?.overall_loss_used ?? 0) > starting * Number(overallLimitPercent) / 100;
-  const passed = !breached && target > 0 && profit >= target && tradingDays >= (plan.minimum_trading_days ?? 0);
-  const progress = target > 0 ? Math.max(0, Math.min(100, profit / target * 100)) : 0;
+  const dailyLossUsed = (metrics ?? []).reduce((maximum, metric) => {
+    const value = scaled(metric.daily_loss_used);
+    return value > maximum ? value : maximum;
+  }, 0n);
+  const overallLossUsed = (metrics ?? []).reduce((maximum, metric) => {
+    const value = scaled(metric.overall_loss_used);
+    return value > maximum ? value : maximum;
+  }, 0n);
+  const breached = Boolean(breach) || dailyLossUsed > percentLimit(starting, dailyLimitPercent) || overallLossUsed > percentLimit(starting, overallLimitPercent);
+  const passed = !breached && target > 0n && profit >= target && tradingDays >= (plan.minimum_trading_days ?? 0);
   return {
     accountId,
     currentProfit,
-    profitTarget: String(target),
-    profitProgressPercent: progress.toFixed(2),
-    dailyLossUsed: String(metrics?.[0]?.daily_loss_used ?? "0"),
-    overallLossUsed: String(metrics?.[0]?.overall_loss_used ?? "0"),
+    profitTarget: decimalFromScaled(target),
+    profitProgressPercent: ratioPercent(profit, target),
+    dailyLossUsed: decimalFromScaled(dailyLossUsed),
+    overallLossUsed: decimalFromScaled(overallLossUsed),
     tradingDays,
     minimumTradingDays: plan.minimum_trading_days ?? 0,
     breached,
@@ -60,6 +93,11 @@ export async function syncAndEvaluateAccount(accountId: string) {
   if (!evaluation.providerAvailable) return evaluation;
   const admin = createSupabaseAdminClient();
   const nextStatus = evaluation.breached ? "failed" : evaluation.passed ? "passed" : "active";
-  await admin.from("accounts").update({ status: nextStatus, updated_at: new Date().toISOString() }).eq("id", accountId).eq("status", "active");
+  const { data: changed } = await admin.from("accounts").update({ status: nextStatus, updated_at: new Date().toISOString() }).eq("id", accountId).eq("status", "active").select("user_id, status").maybeSingle();
+  if (changed && nextStatus !== "active") {
+    const action = nextStatus === "passed" ? "challenge_passed" : "challenge_failed";
+    await admin.from("audit_logs").insert({ actor_id: changed.user_id, action, entity_type: "account", entity_id: accountId, metadata: { breach_reason: evaluation.breachReason } });
+    await admin.from("notifications").insert({ user_id: changed.user_id, category: nextStatus === "passed" ? "Challenge" : "Rule alert", title: nextStatus === "passed" ? "Challenge passed" : "Challenge failed", description: nextStatus === "passed" ? "Your server-side challenge evaluation has passed." : `Your challenge failed: ${evaluation.breachReason ?? "a configured rule was breached"}.`, href: "/challenges" });
+  }
   return evaluation;
 }

@@ -6,7 +6,7 @@ import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import type { ChallengePlan } from "@/features/challenges/challenge-catalogue";
-import { createCryptoPaymentRequest, createPendingOrder, getOrderPaymentStatus, type PaymentRequest, type PendingOrder } from "@/features/orders/order-service";
+import { cancelOrder, createCryptoPaymentRequest, createPendingOrder, getOrderPaymentStatus, type PaymentRequest, type PendingOrder } from "@/features/orders/order-service";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/features/payments/payment-config";
 
 function money(value: number) {
@@ -27,6 +27,7 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const priceCents = order?.amountCents ?? model.priceCents;
 
   async function handleCreateOrder() {
@@ -69,6 +70,21 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
       setPaymentError(error instanceof Error ? error.message : "Unable to refresh payment status.");
     } finally {
       setIsRefreshing(false);
+    }
+  }
+
+  async function handleCancelOrder() {
+    if (!order || isCancelling || order.status === "paid") return;
+    setIsCancelling(true);
+    setPaymentError(null);
+    try {
+      const cancelled = await cancelOrder(order.id);
+      setOrder((current) => current ? { ...current, status: cancelled.status } : current);
+      setPayment((current) => current ? { ...current, status: cancelled.status } : current);
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Unable to cancel this order.");
+    } finally {
+      setIsCancelling(false);
     }
   }
 
@@ -261,6 +277,7 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                   <Button type="button" variant="outline" className="mt-4 w-full" onClick={handleRefreshStatus} disabled={isRefreshing}>
                     {isRefreshing ? "Refreshing..." : "Refresh payment status"}
                   </Button>
+                  {payment.status === "payment_pending" && <Button type="button" variant="ghost" className="mt-2 w-full" onClick={handleCancelOrder} disabled={isCancelling}>{isCancelling ? "Cancelling..." : "Cancel payment"}</Button>}
                   {payment.status === "paid" && <p className="mt-3 text-center text-sm font-medium text-success">Purchase activated successfully.</p>}
                 </div>
               )}
