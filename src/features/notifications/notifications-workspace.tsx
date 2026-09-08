@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -15,8 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/workspace/status-badge";
-import { notifications as initialNotifications } from "@/features/workspace/mock-data";
 import type { WorkspaceNotification } from "@/features/workspace/types";
+import { supabase } from "@/lib/supabase";
 
 const categories = ["All", "Account", "Rule alert", "Payout", "Challenge", "System"] as const;
 type Category = (typeof categories)[number];
@@ -30,8 +30,20 @@ const iconByCategory = {
 } satisfies Record<WorkspaceNotification["category"], typeof Bell>;
 
 export function NotificationsWorkspace() {
-  const [items, setItems] = useState(initialNotifications);
+  const [items, setItems] = useState<WorkspaceNotification[]>([]);
   const [category, setCategory] = useState<Category>("All");
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const { data, error } = await supabase.from("notifications").select("id, category, title, description, href, unread, created_at").order("created_at", { ascending: false });
+      if (!error && mounted) {
+        setItems((data ?? []).map((item) => ({ ...item, timestamp: new Date(item.created_at).toLocaleString() })) as WorkspaceNotification[]);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   const visible = useMemo(
     () => items.filter((item) => category === "All" || item.category === category),
@@ -44,6 +56,7 @@ export function NotificationsWorkspace() {
   }
 
   function markRead(id: string) {
+    void supabase.from("notifications").update({ unread: false }).eq("id", id);
     setItems((current) => {
       const next = current.map((item) => item.id === id ? { ...item, unread: false } : item);
       publishUnreadCount(next.filter((item) => item.unread).length);
@@ -52,6 +65,7 @@ export function NotificationsWorkspace() {
   }
 
   function markAllRead() {
+    void supabase.from("notifications").update({ unread: false }).eq("unread", true);
     setItems((current) => current.map((item) => ({ ...item, unread: false })));
     publishUnreadCount(0);
   }
@@ -73,7 +87,7 @@ export function NotificationsWorkspace() {
         <div className="flex flex-col justify-between gap-4 border-b border-border p-5 sm:flex-row sm:items-center">
           <div>
             <h2 id="notification-list-title" className="text-base font-semibold">Notification centre</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Updates are stored locally for this demo session.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Updates are stored securely with your account.</p>
           </div>
           <label className="relative">
             <Filter className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

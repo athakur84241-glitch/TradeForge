@@ -1,7 +1,17 @@
 "use server";
 
-import { getChallengePlanById } from "@/features/challenges/challenge-catalogue";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+type OrderRow = {
+  id: string;
+  challenge_plan_id: string;
+  account_size: number;
+  amount_cents: number;
+  currency: string;
+  status: PendingOrder["status"];
+  created_at: string;
+};
 
 export type PendingOrder = {
   id: string;
@@ -9,7 +19,7 @@ export type PendingOrder = {
   accountSize: number;
   amountCents: number;
   currency: string;
-  status: "pending";
+  status: "pending" | "payment_pending" | "paid" | "failed" | "cancelled" | "expired";
   createdAt: string;
 };
 
@@ -23,23 +33,12 @@ export async function createPendingOrder(challengePlanId: string): Promise<Pendi
   if (userError) throw new Error(`Authentication failed: ${userError.message}`);
   if (!user) throw new Error("You must be logged in to create an order.");
 
-  const plan = await getChallengePlanById(challengePlanId);
-  if (!plan) throw new Error("The selected challenge plan is no longer available.");
-
-  const { data, error } = await supabase
-    .from("orders")
-    .insert({
-      user_id: user.id,
-      challenge_plan_id: plan.planId,
-      account_size: plan.accountSize,
-      amount_cents: plan.priceCents,
-      currency: plan.currency,
-      status: "pending",
-    })
-    .select("id, challenge_plan_id, account_size, amount_cents, currency, status, created_at")
+  const { data: rawData, error } = await supabase
+    .rpc("create_pending_order", { plan_id: challengePlanId })
     .single();
 
   if (error) throw new Error(`Failed to create order: ${error.message}`);
+  const data = rawData as OrderRow;
 
   return {
     id: data.id,
@@ -47,7 +46,150 @@ export async function createPendingOrder(challengePlanId: string): Promise<Pendi
     accountSize: data.account_size,
     amountCents: data.amount_cents,
     currency: data.currency,
-    status: "pending",
+    status: data.status,
     createdAt: data.created_at,
   };
+}
+
+export type PaymentRequest = PendingOrder & {
+  paymentMethod: string;
+  asset: string;
+  network: string;
+  address: string;
+  expectedAmount: string;
+  paymentReference: string;
+  expiresAt: string;
+};
+
+export async function createCryptoPaymentRequest(orderId: string, method: string): Promise<PaymentRequest> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw new Error("You must be logged in to create a payment request.");
+
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id, user_id, challenge_plan_id, account_size, amount_cents, currency, status, created_at, payment_method, payment_network, payment_address, expected_amount, expected_amount_atomic, payment_reference, payment_expires_at")
+    .eq("id", orderId)
+    .eq("user_id", user.id)
+    .single();
+  if (orderError || !order) throw new Error("Order not found.");
+
+  const { getPaymentMethodConfig, calculateExpectedAmount } = await import("@/features/payments/payment-config");
+  const config = getPaymentMethodConfig(method);
+  const admin = createSupabaseAdminClient();
+  const now = Date.now();
+  const expiresAt = new Date(now + 30 * 60 * 1000).toISOString();
+  const isReusable = order.status === "payment_pending" && order.payment_method === config.method
+    && order.payment_expires_at && new Date(order.payment_expires_at).getTime() > now;
+  const paymentReference = isReusable ? order.payment_reference : crypto.randomUUID();
+  const expected = isReusable
+    ? { amount: order.expected_amount, atomic: order.expected_amount_atomic }
+    : calculateExpectedAmount(order.amount_cents, config);
+
+  if (order.status !== "pending" && !isReusable) {
+    throw new Error("This order is no longer available for payment.");
+  }
+
+  const { data: updated, error: updateError } = await admin
+    .from("orders")
+    .update({
+      status: "payment_pending",
+      payment_provider: "signed_webhook",
+      payment_method: config.method,
+      payment_network: config.network,
+      payment_address: config.address,
+      expected_amount: expected.amount,
+      expected_amount_atomic: expected.atomic,
+      exchange_rate: config.rateUsd,
+      rate_timestamp: new Date().toISOString(),
+      payment_reference: paymentReference,
+      payment_expires_at: isReusable ? order.payment_expires_at : expiresAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", order.id)
+    .eq("user_id", user.id)
+    .select("id, challenge_plan_id, account_size, amount_cents, currency, status, created_at, payment_method, payment_network, payment_address, expected_amount, payment_reference, payment_expires_at")
+    .single();
+  if (updateError || !updated) throw new Error("Unable to create payment request.");
+
+  return {
+    id: updated.id,
+    challengePlanId: updated.challenge_plan_id,
+    accountSize: updated.account_size,
+    amountCents: updated.amount_cents,
+    currency: updated.currency,
+    status: updated.status,
+    createdAt: updated.created_at,
+    paymentMethod: updated.payment_method,
+    asset: config.asset,
+    network: updated.payment_network,
+    address: updated.payment_address,
+    expectedAmount: updated.expected_amount,
+    paymentReference: updated.payment_reference,
+    expiresAt: updated.payment_expires_at,
+  };
+}
+
+export async function getOrderPaymentStatus(orderId: string): Promise<Pick<PendingOrder, "id" | "status"> & { expiresAt: string | null }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be logged in to view this order.");
+  const { data, error } = await supabase.from("orders").select("id, status, payment_expires_at").eq("id", orderId).eq("user_id", user.id).single();
+  if (error || !data) throw new Error("Order not found.");
+  const isExpired = data.payment_expires_at && new Date(data.payment_expires_at).getTime() <= Date.now();
+  return { id: data.id, status: isExpired && data.status === "payment_pending" ? "expired" : data.status, expiresAt: data.payment_expires_at };
+}
+
+export async function getUserOrders(): Promise<PendingOrder[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be logged in to view orders.");
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, challenge_plan_id, account_size, amount_cents, currency, status, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error("Unable to load orders.");
+  return (data ?? []).map((order) => ({
+    id: order.id,
+    challengePlanId: order.challenge_plan_id,
+    accountSize: order.account_size,
+    amountCents: order.amount_cents,
+    currency: order.currency,
+    status: order.status,
+    createdAt: order.created_at,
+  }));
+}
+
+export type Purchase = {
+  id: string;
+  orderId: string;
+  challengePlanId: string;
+  accountSize: number;
+  amountCents: number;
+  currency: string;
+  status: "active" | "cancelled";
+  purchasedAt: string;
+};
+
+export async function getUserPurchases(): Promise<Purchase[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("You must be logged in to view purchases.");
+  const { data, error } = await supabase
+    .from("purchases")
+    .select("id, order_id, challenge_plan_id, account_size, amount_cents, currency, status, purchased_at")
+    .eq("user_id", user.id)
+    .order("purchased_at", { ascending: false });
+  if (error) throw new Error("Unable to load purchases.");
+  return (data ?? []).map((purchase) => ({
+    id: purchase.id,
+    orderId: purchase.order_id,
+    challengePlanId: purchase.challenge_plan_id,
+    accountSize: purchase.account_size,
+    amountCents: purchase.amount_cents,
+    currency: purchase.currency,
+    status: purchase.status,
+    purchasedAt: purchase.purchased_at,
+  }));
 }

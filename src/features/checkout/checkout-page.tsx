@@ -6,7 +6,8 @@ import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import type { ChallengePlan } from "@/features/challenges/challenge-catalogue";
-import { createPendingOrder, type PendingOrder } from "@/features/orders/order-service";
+import { createCryptoPaymentRequest, createPendingOrder, getOrderPaymentStatus, type PaymentRequest, type PendingOrder } from "@/features/orders/order-service";
+import { PAYMENT_METHODS, type PaymentMethod } from "@/features/payments/payment-config";
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -21,6 +22,11 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
   const [order, setOrder] = useState<PendingOrder | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS[0]);
+  const [payment, setPayment] = useState<PaymentRequest | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   async function handleCreateOrder() {
     if (isCreatingOrder || order) return;
@@ -35,6 +41,33 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
       setOrderError(error instanceof Error ? error.message : "Unable to create order.");
     } finally {
       setIsCreatingOrder(false);
+    }
+  }
+
+  async function handleCreatePayment() {
+    if (!order || isCreatingPayment) return;
+    setIsCreatingPayment(true);
+    setPaymentError(null);
+    try {
+      setPayment(await createCryptoPaymentRequest(order.id, paymentMethod));
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Unable to create payment instructions.");
+    } finally {
+      setIsCreatingPayment(false);
+    }
+  }
+
+  async function handleRefreshStatus() {
+    if (!order || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const status = await getOrderPaymentStatus(order.id);
+      setOrder((current) => current ? { ...current, status: status.status } : current);
+      setPayment((current) => current ? { ...current, status: status.status, expiresAt: status.expiresAt ?? current.expiresAt } : current);
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Unable to refresh payment status.");
+    } finally {
+      setIsRefreshing(false);
     }
   }
 
@@ -169,11 +202,21 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
 
               <div className="mt-5 rounded-tf-md border border-border bg-background p-4">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Next step
+                  Payment method
                 </p>
-                <p className="mt-2 text-sm">
-                  Create your pending order before continuing to payment.
-                </p>
+                <div className="mt-3 grid gap-2">
+                  {PAYMENT_METHODS.map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      className={`rounded-tf-md border px-3 py-3 text-left text-sm transition-colors ${paymentMethod === method ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                      onClick={() => setPaymentMethod(method)}
+                      disabled={!order || Boolean(payment)}
+                    >
+                      <span className="font-medium">{method.replace("_", " / ")}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <Button
@@ -185,6 +228,35 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                 {isCreatingOrder ? "Creating order..." : order ? "Order created" : "Create pending order"}
               </Button>
 
+              {order && !payment && (
+                <Button type="button" variant="outline" className="mt-3 w-full" disabled={isCreatingPayment} onClick={handleCreatePayment}>
+                  {isCreatingPayment ? "Preparing payment..." : "Show payment instructions"}
+                </Button>
+              )}
+
+              {payment && (
+                <div className="mt-5 rounded-tf-md border border-primary/40 bg-primary/5 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold">Awaiting payment</p>
+                    <StatusBadge tone={payment.status === "paid" ? "success" : "warning"}>
+                      {payment.status === "paid" ? "Paid" : payment.status.replace("_", " ")}
+                    </StatusBadge>
+                  </div>
+                  <dl className="mt-4 space-y-3 text-sm">
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Asset</dt><dd className="font-medium">{payment.asset}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Network</dt><dd className="font-medium">{payment.network}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Amount</dt><dd className="font-medium">{payment.expectedAmount}</dd></div>
+                    <div><dt className="text-muted-foreground">Destination</dt><dd className="mt-1 break-all font-mono text-xs">{payment.address}</dd></div>
+                    <div><dt className="text-muted-foreground">Payment reference</dt><dd className="mt-1 break-all font-mono text-xs">{payment.paymentReference}</dd></div>
+                  </dl>
+                  <p className="mt-4 text-xs leading-5 text-muted-foreground">Send the exact amount on the selected network. The server verifies the blockchain payment before activating your purchase.</p>
+                  <Button type="button" variant="outline" className="mt-4 w-full" onClick={handleRefreshStatus} disabled={isRefreshing}>
+                    {isRefreshing ? "Refreshing..." : "Refresh payment status"}
+                  </Button>
+                  {payment.status === "paid" && <p className="mt-3 text-center text-sm font-medium text-success">Purchase activated successfully.</p>}
+                </div>
+              )}
+
               {order ? (
                 <p className="mt-3 text-center text-xs leading-5 text-success">
                   Pending order created: {order.id}
@@ -193,10 +265,13 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                 <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
                   {orderError}
                 </p>
+              ) : paymentError ? (
+                <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
+                  {paymentError}
+                </p>
               ) : (
                 <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
-                  Payment processing will be connected after the checkout flow
-                  is verified.
+                  Payment verification is server-side. Your purchase activates only after a confirmed payment.
                 </p>
               )}
             </div>

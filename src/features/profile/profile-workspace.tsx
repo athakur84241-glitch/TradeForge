@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   CalendarDays,
   Check,
@@ -19,19 +19,34 @@ import { DemoAction } from "@/components/workspace/demo-action";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
-import { accounts, loginActivity, workspaceUser } from "@/features/workspace/mock-data";
+import { getProfile, updateProfile } from "@/features/profile/profile-service";
+import { getUserAccountOverviews, type AccountOverview } from "@/features/accounts/account-service";
+import { supabase } from "@/lib/supabase";
+import { loginActivity, workspaceUser } from "@/features/workspace/mock-data";
 
 export function ProfileWorkspace() {
   const [profileSaved, setProfileSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const [profile, setProfile] = useState<{ display_name?: string | null; first_name?: string | null; last_name?: string | null; phone?: string | null; country?: string | null; timezone?: string | null; language?: string | null }>({});
+  const [accountHistory, setAccountHistory] = useState<AccountOverview[]>([]);
 
-  function saveProfile(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    void getProfile().then(setProfile).catch(() => undefined);
+    void getUserAccountOverviews().then(setAccountHistory).catch(() => undefined);
+  }, []);
+
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const values = new FormData(event.currentTarget);
+    await updateProfile({ firstName: String(values.get("firstName") ?? ""), lastName: String(values.get("lastName") ?? ""), phone: String(values.get("phone") ?? ""), country: String(values.get("country") ?? ""), timezone: String(values.get("timezone") ?? ""), language: String(values.get("language") ?? "") });
     setProfileSaved(true);
   }
 
-  function changePassword(event: FormEvent<HTMLFormElement>) {
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const values = new FormData(event.currentTarget);
+    if (values.get("newPassword") !== values.get("confirmPassword")) return;
+    await supabase.auth.updateUser({ password: String(values.get("newPassword")) });
     setPasswordSaved(true);
   }
 
@@ -99,25 +114,25 @@ export function ProfileWorkspace() {
       <div className="grid gap-6 xl:grid-cols-12">
         <SectionCard title="Personal information" description="Demo contact and regional preferences." className="xl:col-span-8">
           <form onSubmit={saveProfile} className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-medium">First name<Input defaultValue="Alex" /></label>
-            <label className="grid gap-2 text-sm font-medium">Last name<Input defaultValue="Morgan" /></label>
-            <label className="grid gap-2 text-sm font-medium">Email<Input type="email" defaultValue={workspaceUser.email} /></label>
-            <label className="grid gap-2 text-sm font-medium">Phone<Input type="tel" defaultValue={workspaceUser.phone} /></label>
+            <label className="grid gap-2 text-sm font-medium">First name<Input name="firstName" defaultValue={profile.first_name ?? ""} /></label>
+            <label className="grid gap-2 text-sm font-medium">Last name<Input name="lastName" defaultValue={profile.last_name ?? ""} /></label>
+            <label className="grid gap-2 text-sm font-medium">Email<Input type="email" defaultValue={workspaceUser.email} readOnly /></label>
+            <label className="grid gap-2 text-sm font-medium">Phone<Input name="phone" type="tel" defaultValue={profile.phone ?? ""} /></label>
             <label className="grid gap-2 text-sm font-medium">
               Country
-              <select className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground" defaultValue={workspaceUser.country}>
+              <select name="country" className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground" defaultValue={profile.country ?? ""}>
                 <option>United Kingdom</option><option>India</option><option>United Arab Emirates</option><option>United States</option>
               </select>
             </label>
             <label className="grid gap-2 text-sm font-medium">
               Timezone
-              <select className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground" defaultValue={workspaceUser.timezone}>
+              <select name="timezone" className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground" defaultValue={profile.timezone ?? "UTC"}>
                 <option>Europe/London (UTC+1)</option><option>Asia/Kolkata (UTC+5:30)</option><option>America/New_York (UTC-4)</option>
               </select>
             </label>
             <label className="grid gap-2 text-sm font-medium sm:col-span-2">
               Language
-              <select className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground" defaultValue={workspaceUser.language}>
+              <select name="language" className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground" defaultValue={profile.language ?? "English (UK)"}>
                 <option>English (UK)</option><option>English (US)</option><option>Hindi</option>
               </select>
             </label>
@@ -172,9 +187,9 @@ export function ProfileWorkspace() {
 
         <SectionCard title="Password controls" description="Demo validation only; no backend credential is changed.">
           <form onSubmit={changePassword} className="grid gap-4">
-            <label className="grid gap-2 text-sm font-medium">Current password<PasswordInput required /></label>
-            <label className="grid gap-2 text-sm font-medium">New password<PasswordInput required minLength={8} /></label>
-            <label className="grid gap-2 text-sm font-medium">Confirm new password<PasswordInput required minLength={8} /></label>
+            <label className="grid gap-2 text-sm font-medium">Current password<PasswordInput name="currentPassword" required /></label>
+            <label className="grid gap-2 text-sm font-medium">New password<PasswordInput name="newPassword" required minLength={8} /></label>
+            <label className="grid gap-2 text-sm font-medium">Confirm new password<PasswordInput name="confirmPassword" required minLength={8} /></label>
             <div className="flex items-center justify-end gap-3">
               {passwordSaved && <span className="inline-flex items-center gap-1.5 text-sm text-success"><Check className="size-4" /> Demo validated</span>}
               <Button type="submit">Validate password change</Button>
@@ -199,13 +214,13 @@ export function ProfileWorkspace() {
               <tr>{["Account", "Account ID", "Created", "Last activity", "Status"].map((heading) => <th key={heading} className="px-5 py-3 font-medium">{heading}</th>)}</tr>
             </thead>
             <tbody>
-              {accounts.slice(0, 5).map((account) => (
+              {accountHistory.slice(0, 5).map((account) => (
                 <tr key={account.id} className="border-b border-border/70 last:border-0">
                   <td className="px-5 py-4 font-semibold">{account.name}</td>
                   <td className="px-5 py-4 text-muted-foreground">{account.id}</td>
-                  <td className="px-5 py-4 text-muted-foreground">{account.createdAt}</td>
-                  <td className="px-5 py-4 text-muted-foreground">{account.lastActivity}</td>
-                  <td className="px-5 py-4"><StatusBadge tone={account.status === "Failed" ? "danger" : account.status === "Archived" ? "neutral" : "success"}>{account.status}</StatusBadge></td>
+                  <td className="px-5 py-4 text-muted-foreground">{new Date(account.createdAt).toLocaleDateString()}</td>
+                  <td className="px-5 py-4 text-muted-foreground">{account.platform}</td>
+                  <td className="px-5 py-4"><StatusBadge tone={account.status === "failed" ? "danger" : account.status === "closed" ? "neutral" : "success"}>{account.status}</StatusBadge></td>
                 </tr>
               ))}
             </tbody>

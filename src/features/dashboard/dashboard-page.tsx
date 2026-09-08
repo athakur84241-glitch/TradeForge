@@ -250,9 +250,10 @@ export function DashboardPage() {
   const currentProfit = selectedAccount?.pnl ?? 0;
   const balance = selectedAccount?.balance ?? 0;
   const equity = selectedAccount?.equity ?? 0;
+  const tradingAvailable = Boolean(selectedAccount?.platform && selectedAccount.platform !== "Not connected");
   const targetAmount = Math.max(6000, accountSize * 0.06);
   const targetRemaining = Math.max(0, targetAmount - currentProfit);
-  const hasTradingActivity = Boolean(selectedAccount && (Math.abs(currentProfit) > 0 || selectedAccount.pnlPercent !== 0));
+  const hasTradingActivity = Boolean(tradingAvailable && selectedAccount && (Math.abs(currentProfit) > 0 || selectedAccount.pnlPercent !== 0));
   const profitTargetProgress = hasTradingActivity ? clampPercent(selectedAccount?.pnlPercent ?? 0) : 0;
   const dailyDrawdownPercent = hasTradingActivity ? clampPercent(((accountSize - Math.min(balance, accountSize)) / Math.max(accountSize, 1)) * 100) : 0;
   const overallDrawdownPercent = hasTradingActivity ? clampPercent(((accountSize - Math.min(equity, accountSize)) / Math.max(accountSize, 1)) * 100) : 0;
@@ -262,10 +263,10 @@ export function DashboardPage() {
     { label: "Balance", value: selectedAccount ? money(balance) : "—", detail: selectedAccount ? `${selectedAccount.phase} account balance` : "No account selected", icon: WalletCards, tone: "success" as const, trend: "up" as const },
     { label: "Equity", value: selectedAccount ? money(equity) : "—", detail: selectedAccount ? `${money(currentProfit)} open PnL` : "No account selected", icon: Landmark, tone: "primary" as const, trend: "up" as const },
     { label: "Current profit", value: selectedAccount ? `${currentProfit >= 0 ? "+" : ""}${money(currentProfit)}` : "—", detail: selectedAccount ? `${profitTargetProgress.toFixed(0)}% of phase target` : "No account selected", icon: TrendingUp, tone: "success" as const, trend: "up" as const },
-    { label: "Daily drawdown", value: selectedAccount ? formatPercent(dailyDrawdownPercent) : "—", detail: selectedAccount ? `${dailyDrawdownPercent.toFixed(1)}% limit used` : "No account selected", icon: Gauge, tone: "neutral" as const, trend: "flat" as const },
-    { label: "Overall drawdown", value: selectedAccount ? formatPercent(overallDrawdownPercent) : "—", detail: selectedAccount ? `${overallDrawdownPercent.toFixed(1)}% limit used` : "No account selected", icon: ShieldCheck, tone: "neutral" as const, trend: "flat" as const },
-    { label: "Profit target", value: selectedAccount ? `${profitTargetProgress.toFixed(2)}%` : "—", detail: selectedAccount ? `Target 6% · ${money(targetRemaining)} remaining` : "No account selected", icon: Target, tone: "warning" as const, trend: "up" as const },
-    { label: "Trading days", value: tradingDaysValue, detail: selectedAccount ? "Selected account activity" : "No account selected", icon: CalendarDays, tone: "success" as const, trend: "up" as const },
+    { label: "Daily drawdown", value: tradingAvailable ? formatPercent(dailyDrawdownPercent) : "Unavailable", detail: tradingAvailable ? `${dailyDrawdownPercent.toFixed(1)}% limit used` : "Trading provider not configured", icon: Gauge, tone: "neutral" as const, trend: "flat" as const },
+    { label: "Overall drawdown", value: tradingAvailable ? formatPercent(overallDrawdownPercent) : "Unavailable", detail: tradingAvailable ? `${overallDrawdownPercent.toFixed(1)}% limit used` : "Trading provider not configured", icon: ShieldCheck, tone: "neutral" as const, trend: "flat" as const },
+    { label: "Profit target", value: tradingAvailable ? `${profitTargetProgress.toFixed(2)}%` : "Unavailable", detail: tradingAvailable ? `Target 6% · ${money(targetRemaining)} remaining` : "Trading provider not configured", icon: Target, tone: "warning" as const, trend: "flat" as const },
+    { label: "Trading days", value: tradingAvailable ? tradingDaysValue : "Unavailable", detail: tradingAvailable ? "Selected account activity" : "Trading provider not configured", icon: CalendarDays, tone: "warning" as const, trend: "flat" as const },
   ];
   return (
     <div className="grid gap-6">

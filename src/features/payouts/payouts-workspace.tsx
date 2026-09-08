@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import { supabase } from "@/lib/supabase";
+import { requestPayout } from "@/features/payouts/payout-service";
 
 import type { Payout } from "@/features/workspace/types";
 
@@ -75,9 +76,6 @@ const [submitError, setSubmitError] = useState<string | null>(null);
   .eq("status", "Funded")
   .maybeSingle();
 
-console.log("DEBUG USER:", user.id);
-console.log("DEBUG ACCOUNT:", account);
-console.log("DEBUG ACCOUNT ERROR:", accountError);
 
 if (accountError) throw accountError;
 
@@ -85,19 +83,7 @@ if (!account) {
   throw new Error("Funded account was not found for this user.");
 }
 
-    const { error: payoutError } = await supabase
-      .from("payout_requests")
-      .insert({
-        user_id: user.id,
-        account_id: account.id,
-        amount,
-        method,
-        status: "Pending",
-        requested_at: new Date().toISOString(),
-        note: "Payout request submitted by trader",
-      });
-
-    if (payoutError) throw payoutError;
+    await requestPayout(account.id, String(amount), method);
 
     setSubmitted(true);
     onSubmitted();
@@ -166,14 +152,10 @@ if (!account) {
                     <option>USDC</option>
                   </select>
                 </label>
-                <label className="flex items-start gap-3 rounded-tf-md border border-border bg-surface p-4 text-sm leading-5 text-muted-foreground">
-                  <input type="checkbox" required className="mt-0.5 size-4 accent-[hsl(var(--primary))]" />
-                  I understand this is a mock request and no funds will be processed.
-                </label>
                 <div className="mt-2 flex justify-end gap-3">
                   <Dialog.Close asChild><Button variant="ghost">Cancel</Button></Dialog.Close>
                   <Button type="submit" disabled={submitting}>
-  {submitting ? "Submitting..." : "Submit demo request"}
+                  {submitting ? "Submitting..." : "Submit payout request"}
 </Button>
                 </div>
               </form>
@@ -207,10 +189,6 @@ useEffect(() => {
     setLoading(true);
     setFetchError(null);
 
-    console.log(
-  "SUPABASE URL:",
-  process.env.NEXT_PUBLIC_SUPABASE_URL
-);
 
     try {
       const { data: userData, error: userError } =
@@ -245,16 +223,13 @@ if (mounted) {
      const payoutQuery = supabase
   .from("payout_requests")
   .select(
-    "id, user_id, account_id, amount, method, status, requested_at, processed_at, note"
+    "id, user_id, account_id, requested_amount, method, status, requested_at, processed_at, note"
   )
   .eq("user_id", user.id)
   .order("requested_at", { ascending: false });
 
 const { data, error } = await payoutQuery;
 
-console.log("PAYOUT DEBUG USER:", user.id);
-console.log("PAYOUT DEBUG DATA:", data);
-console.log("PAYOUT DEBUG ERROR:", error);
 
       if (error) throw error;
 
@@ -266,8 +241,8 @@ console.log("PAYOUT DEBUG ERROR:", error);
           ? new Date(row.processed_at).toLocaleDateString("en-GB")
           : "—",
         method: row.method,
-        amount: Number(row.amount),
-        status: row.status as Payout["status"],
+        amount: Number(row.requested_amount),
+        status: row.status === "paid" ? "Completed" : row.status === "rejected" ? "Rejected" : "Pending",
         note: row.note ?? "—",
       }));
 
@@ -291,7 +266,6 @@ console.log("PAYOUT DEBUG ERROR:", error);
   });
 
   console.error("PAYOUT_ERROR", errorMessage);
-  alert(errorMessage);
 
   if (mounted) {
     setFetchError(supabaseError.message ?? "Failed to load payouts");
@@ -336,7 +310,7 @@ const eligibilityText = eligibilityLoading
       <PageHeader
         eyebrow="Payouts"
         title="Payout centre"
-        description="Review demo eligibility, payout methods, pending requests, and account history. No real payment processing is enabled."
+        description="Review eligibility, payout methods, pending requests, and account history. Settlement remains subject to administrative review."
         action={
   <RequestPayoutDialog
     onSubmitted={() => {

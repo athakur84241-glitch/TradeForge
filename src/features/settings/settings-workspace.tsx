@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import { loginActivity } from "@/features/workspace/mock-data";
+import { updatePreferences } from "@/features/profile/profile-service";
 
 type PreferenceKey =
   | "challengeUpdates"
@@ -75,14 +76,19 @@ export function SettingsWorkspace() {
     setPasswordSaved(true);
   }
 
+  async function saveAllPreferences() {
+    await updatePreferences(preferences);
+    setSaved(true);
+  }
+
   return (
     <div className="grid gap-6">
       <PageHeader
         eyebrow="Settings"
         title="Workspace settings"
-        description="Control notifications, appearance, trading preferences, privacy, and security for this local demo workspace."
+        description="Control notifications, appearance, trading preferences, privacy, and security for your workspace."
         action={
-          <Button type="button" onClick={() => setSaved(true)}>
+          <Button type="button" onClick={() => void saveAllPreferences()}>
             {saved ? <Check className="size-4" /> : <Save className="size-4" />}
             {saved ? "Saved locally" : "Save preferences"}
           </Button>
