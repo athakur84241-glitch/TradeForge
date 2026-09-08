@@ -24,7 +24,6 @@ export function verifyWebhookSignature(payload: string, signature: string | null
 }
 
 export async function activateVerifiedPayment(event: VerifiedPaymentEvent) {
-  if (!process.env.CRYPTO_WEBHOOK_SECRET) throw new Error("Payment verification is not configured.");
   if (!PAYMENT_METHODS.includes(event.payment_method as (typeof PAYMENT_METHODS)[number])
     || PAYMENT_METHOD_ASSETS[event.payment_method as (typeof PAYMENT_METHODS)[number]] !== event.asset
     || !event.transaction_hash || !event.payment_reference || !/^\d+$/.test(event.amount_atomic)) {

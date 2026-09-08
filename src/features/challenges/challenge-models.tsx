@@ -15,7 +15,11 @@ function money(value: number) {
 export function ChallengeModels({ challengeModels }: { challengeModels: ChallengePlan[] }) {
   const [query, setQuery] = useState("");
   const [size, setSize] = useState("All sizes");
-  
+  const [selectedSizes, setSelectedSizes] = useState<Record<string, number>>({});
+  const availableSizes = useMemo(
+    () => [...new Set(challengeModels.flatMap((model) => model.sizes))].sort((left, right) => left - right),
+    [challengeModels],
+  );
 
   const visible = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -48,7 +52,7 @@ export function ChallengeModels({ challengeModels }: { challengeModels: Challeng
             className="h-10 min-w-48 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground"
           >
             <option>All sizes</option>
-            {[5000, 10000, 25000, 50000, 100000].map((amount) => (
+            {availableSizes.map((amount) => (
               <option key={amount} value={amount}>{money(amount)}</option>
             ))}
           </select>
@@ -89,15 +93,31 @@ export function ChallengeModels({ challengeModels }: { challengeModels: Challeng
               <p className="mt-4 text-xs text-muted-foreground">
                 Sizes: {model.sizes.map(money).join(" · ")}
               </p>
+              <label className="mt-4 grid gap-2 text-sm font-medium">
+                Account size
+                <select
+                  value={selectedSizes[model.slug] ?? model.sizes[0]}
+                  onChange={(event) => setSelectedSizes((current) => ({ ...current, [model.slug]: Number(event.target.value) }))}
+                  className="h-10 rounded-tf-md border border-border bg-background px-3 text-sm text-foreground"
+                >
+                  {model.sizes.map((accountSize) => (
+                    <option key={accountSize} value={accountSize}>{money(accountSize)}</option>
+                  ))}
+                </select>
+              </label>
+              <p className="mt-3 text-sm font-semibold">
+                {money((model.pricesBySize[selectedSizes[model.slug] ?? model.sizes[0]] ?? 0) / 100)}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">{model.currency}</span>
+              </p>
               <Button
-  asChild
-  variant={model.recommended ? "primary" : "outline"}
-  className="mt-5 w-full"
->
-  <Link href={`/challenges/${model.id}/${model.sizes[0]}`}>
-    Review model
-  </Link>
-</Button>
+                asChild
+                variant={model.recommended ? "primary" : "outline"}
+                className="mt-5 w-full"
+              >
+                <Link href={`/challenges/${model.slug}/${selectedSizes[model.slug] ?? model.sizes[0]}`}>
+                  Review model
+                </Link>
+              </Button>
             </article>
           ))}
         </div>

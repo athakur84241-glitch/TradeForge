@@ -15,3 +15,10 @@ export async function getAdminSnapshot() {
   if (failure?.error) throw new Error("Unable to load administrator workspace.");
   return { orders: orders.data ?? [], purchases: purchases.data ?? [], accounts: accounts.data ?? [], payouts: payouts.data ?? [], plans: plans.data ?? [] };
 }
+
+export async function setChallengePlanActive(planId: string, isActive: boolean) {
+  const { admin, user } = await requireAdmin();
+  const { error } = await admin.from("challenge_plans").update({ is_active: isActive, updated_at: new Date().toISOString() }).eq("id", planId);
+  if (error) throw new Error("Unable to update challenge plan.");
+  await admin.from("audit_logs").insert({ actor_id: user.id, action: isActive ? "challenge_plan_enabled" : "challenge_plan_disabled", entity_type: "challenge_plan", entity_id: planId, metadata: { is_active: isActive } });
+}

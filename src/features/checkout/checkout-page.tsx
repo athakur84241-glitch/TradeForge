@@ -13,7 +13,7 @@ function money(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
@@ -27,6 +27,7 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const priceCents = order?.amountCents ?? model.priceCents;
 
   async function handleCreateOrder() {
     if (isCreatingOrder || order) return;
@@ -198,6 +199,13 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                     {money(size)}
                   </p>
                 </div>
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-xs text-muted-foreground">Price</p>
+                  <p className="mt-1 text-2xl font-semibold">
+                    {new Intl.NumberFormat("en-US", { style: "currency", currency: model.currency, maximumFractionDigits: 2 }).format(priceCents / 100)}
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">{model.currency}</span>
+                  </p>
+                </div>
               </div>
 
               <div className="mt-5 rounded-tf-md border border-border bg-background p-4">
@@ -211,7 +219,7 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                       type="button"
                       className={`rounded-tf-md border px-3 py-3 text-left text-sm transition-colors ${paymentMethod === method ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
                       onClick={() => setPaymentMethod(method)}
-                      disabled={!order || Boolean(payment)}
+                      disabled={Boolean(payment)}
                     >
                       <span className="font-medium">{method.replace("_", " / ")}</span>
                     </button>
@@ -258,8 +266,8 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
               )}
 
               {order ? (
-                <p className="mt-3 text-center text-xs leading-5 text-success">
-                  Pending order created: {order.id}
+                <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
+                  Order status: <span className="font-semibold text-foreground">{order.status.replace("_", " ")}</span> · {order.id}
                 </p>
               ) : orderError ? (
                 <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
@@ -272,6 +280,11 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
               ) : (
                 <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
                   Payment verification is server-side. Your purchase activates only after a confirmed payment.
+                </p>
+              )}
+              {paymentError?.includes("not configured") && (
+                <p className="mt-3 rounded-tf-md border border-warning/30 bg-warning/10 p-3 text-center text-xs leading-5 text-warning">
+                  Crypto payment is temporarily unavailable. Your order remains unpaid and no purchase has been activated.
                 </p>
               )}
             </div>

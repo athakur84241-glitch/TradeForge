@@ -90,11 +90,20 @@ export default async function Page({ params }: PageProps) {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-tf-md border border-primary/30 bg-primary/5 p-4 sm:col-span-2">
+                <p className="text-xs text-muted-foreground">Price</p>
+                <p className="mt-2 font-display text-2xl font-semibold">
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: model.currency, maximumFractionDigits: 2 }).format(model.priceCents / 100)}
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">{model.currency}</span>
+                </p>
+              </div>
               {[
                 ["Profit target", model.profitTarget],
+                ["Profit split", model.profitSplit],
                 ["Daily loss limit", model.dailyLossLimit],
                 ["Overall loss limit", model.overallLossLimit],
                 ["Trading days", model.tradingDays],
+                ["Payout frequency", model.payoutFrequency],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -137,6 +146,12 @@ export default async function Page({ params }: PageProps) {
               <p className="text-xs text-muted-foreground">Account size</p>
               <p className="mt-2 font-display text-2xl font-semibold">
                 ${accountSize.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-tf-md border border-border bg-surface p-4">
+              <p className="text-xs text-muted-foreground">Challenge price</p>
+              <p className="mt-2 text-xl font-semibold">
+                {new Intl.NumberFormat("en-US", { style: "currency", currency: model.currency, maximumFractionDigits: 2 }).format(model.priceCents / 100)}
               </p>
             </div>
 

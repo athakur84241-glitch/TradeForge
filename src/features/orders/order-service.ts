@@ -2,6 +2,8 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { PAYMENT_METHOD_ASSETS, PAYMENT_METHODS, type PaymentMethod, getPaymentMethodConfig, calculateExpectedAmount } from "@/features/payments/payment-config";
+import { createNowPaymentsRequest, isNowPaymentsConfigured } from "@/features/payments/nowpayments-service";
 
 type OrderRow = {
   id: string;
@@ -74,36 +76,46 @@ export async function createCryptoPaymentRequest(orderId: string, method: string
     .single();
   if (orderError || !order) throw new Error("Order not found.");
 
-  const { getPaymentMethodConfig, calculateExpectedAmount } = await import("@/features/payments/payment-config");
-  const config = getPaymentMethodConfig(method);
+  if (!PAYMENT_METHODS.includes(method as PaymentMethod)) throw new Error("Unsupported payment method.");
+  const typedMethod = method as PaymentMethod;
   const admin = createSupabaseAdminClient();
   const now = Date.now();
   const expiresAt = new Date(now + 30 * 60 * 1000).toISOString();
-  const isReusable = order.status === "payment_pending" && order.payment_method === config.method
+  const isReusable = order.status === "payment_pending" && order.payment_method === typedMethod
     && order.payment_expires_at && new Date(order.payment_expires_at).getTime() > now;
-  const paymentReference = isReusable ? order.payment_reference : crypto.randomUUID();
-  const expected = isReusable
-    ? { amount: order.expected_amount, atomic: order.expected_amount_atomic }
-    : calculateExpectedAmount(order.amount_cents, config);
 
   if (order.status !== "pending" && !isReusable) {
     throw new Error("This order is no longer available for payment.");
   }
 
+  const nowPayment = !isReusable && isNowPaymentsConfigured()
+    ? await createNowPaymentsRequest({ orderId: order.id, amountCents: order.amount_cents, currency: order.currency, method: typedMethod })
+    : null;
+  const config = isReusable || nowPayment ? null : getPaymentMethodConfig(typedMethod);
+  const paymentReference = isReusable ? order.payment_reference : nowPayment?.paymentId ?? crypto.randomUUID();
+  const expected = isReusable
+    ? { amount: order.expected_amount, atomic: order.expected_amount_atomic }
+    : nowPayment
+      ? { amount: nowPayment.paymentAmount, atomic: null }
+      : calculateExpectedAmount(order.amount_cents, config!);
+  const paymentAddress = isReusable ? order.payment_address : nowPayment?.paymentAddress ?? config?.address;
+  const paymentNetwork = isReusable ? order.payment_network : nowPayment?.paymentCurrency ?? config?.network;
+  const paymentExpiresAt = isReusable ? order.payment_expires_at : nowPayment?.expiresAt ?? expiresAt;
+
   const { data: updated, error: updateError } = await admin
     .from("orders")
     .update({
       status: "payment_pending",
-      payment_provider: "signed_webhook",
-      payment_method: config.method,
-      payment_network: config.network,
-      payment_address: config.address,
+      payment_provider: nowPayment ? "nowpayments" : "signed_webhook",
+      payment_method: typedMethod,
+      payment_network: paymentNetwork,
+      payment_address: paymentAddress,
       expected_amount: expected.amount,
       expected_amount_atomic: expected.atomic,
-      exchange_rate: config.rateUsd,
+      exchange_rate: nowPayment ? null : config?.rateUsd,
       rate_timestamp: new Date().toISOString(),
       payment_reference: paymentReference,
-      payment_expires_at: isReusable ? order.payment_expires_at : expiresAt,
+      payment_expires_at: paymentExpiresAt,
       updated_at: new Date().toISOString(),
     })
     .eq("id", order.id)
@@ -121,7 +133,7 @@ export async function createCryptoPaymentRequest(orderId: string, method: string
     status: updated.status,
     createdAt: updated.created_at,
     paymentMethod: updated.payment_method,
-    asset: config.asset,
+    asset: PAYMENT_METHOD_ASSETS[typedMethod],
     network: updated.payment_network,
     address: updated.payment_address,
     expectedAmount: updated.expected_amount,
