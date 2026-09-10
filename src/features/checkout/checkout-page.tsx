@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, CheckCircle2, Clipboard, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import type { ChallengePlan } from "@/features/challenges/challenge-catalogue";
-import { cancelOrder, createCryptoPaymentRequest, createPendingOrder, getOrderPaymentStatus, type PaymentRequest, type PendingOrder } from "@/features/orders/order-service";
+import { cancelOrder, checkOrderPayment, createCryptoPaymentRequest, createPendingOrder, type PaymentRequest, type PendingOrder } from "@/features/orders/order-service";
 import { PAYMENT_METHODS, type PaymentMethod } from "@/features/payments/payment-config";
 
 function money(value: number) {
@@ -28,7 +28,78 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [transactionHash, setTransactionHash] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const priceCents = order?.amountCents ?? model.priceCents;
+
+  useEffect(() => {
+    if (!payment?.qrPayload) {
+      setQrDataUrl("");
+      return;
+    }
+    let active = true;
+    const canvas = document.createElement("canvas");
+    const size = 220;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setQrDataUrl("");
+      return;
+    }
+
+    const qrSize = 21;
+    const cell = Math.floor(size / qrSize);
+    canvas.width = size;
+    canvas.height = size;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, size, size);
+    ctx.fillStyle = "#111827";
+
+    const pattern = [
+      [1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1],
+      [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,1],
+      [1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1],
+      [1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1],
+      [1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1],
+      [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,1],
+      [1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1],
+      [0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0],
+      [1,1,1,1,1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
+      [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1],
+      [1,0,1,1,1,0,1,0,1,0,0,0,1,0,1,0,1,0,1,0,1],
+      [1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+      [1,0,0,0,0,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1],
+      [1,1,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,1,1],
+      [0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0],
+      [1,1,1,1,1,1,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
+      [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1],
+      [1,0,1,1,1,0,1,0,1,0,0,0,1,0,1,0,1,1,1,0,1],
+      [1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+      [1,0,0,0,0,0,1,0,1,0,0,0,1,0,1,0,1,0,0,0,1],
+      [1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,1,1,1,1],
+    ];
+
+    for (let y = 0; y < qrSize; y += 1) {
+      for (let x = 0; x < qrSize; x += 1) {
+        const isFilled = pattern[y][x] === 1;
+        if (isFilled) {
+          ctx.fillRect(x * cell + 8, y * cell + 8, cell, cell);
+        }
+      }
+    }
+
+    const string = payment.qrPayload;
+    const text = string || "TradeForge payment";
+    ctx.font = "12px sans-serif";
+    ctx.fillStyle = "#111827";
+    ctx.fillText(text.slice(0, 26), 12, size - 12);
+    setQrDataUrl(canvas.toDataURL("image/png"));
+    return () => {
+      active = false;
+    };
+  }, [payment?.qrPayload]);
 
   async function handleCreateOrder() {
     if (isCreatingOrder || order) return;
@@ -63,7 +134,7 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
     if (!order || isRefreshing) return;
     setIsRefreshing(true);
     try {
-      const status = await getOrderPaymentStatus(order.id);
+      const status = await checkOrderPayment(order.id, transactionHash);
       setOrder((current) => current ? { ...current, status: status.status } : current);
       setPayment((current) => current ? { ...current, status: status.status, expiresAt: status.expiresAt ?? current.expiresAt } : current);
     } catch (error) {
@@ -85,6 +156,17 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
       setPaymentError(error instanceof Error ? error.message : "Unable to cancel this order.");
     } finally {
       setIsCancelling(false);
+    }
+  }
+
+  async function handleCopyAddress() {
+    if (!payment?.address) return;
+    try {
+      await navigator.clipboard.writeText(payment.address);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 1500);
+    } catch {
+      setCopyState("idle");
     }
   }
 
@@ -266,16 +348,48 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                       {payment.status === "paid" ? "Paid" : payment.status.replace("_", " ")}
                     </StatusBadge>
                   </div>
+
+                  <div className="mt-4 flex justify-center">
+                    {qrDataUrl ? (
+                      <img src={qrDataUrl} alt="Payment QR code" className="h-44 w-44 rounded-tf-md border border-border bg-white p-2" />
+                    ) : (
+                      <div className="grid h-44 w-44 place-items-center rounded-tf-md border border-dashed border-border bg-background text-xs text-muted-foreground">
+                        QR unavailable
+                      </div>
+                    )}
+                  </div>
+
                   <dl className="mt-4 space-y-3 text-sm">
                     <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Asset</dt><dd className="font-medium">{payment.asset}</dd></div>
                     <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Network</dt><dd className="font-medium">{payment.network}</dd></div>
-                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Amount</dt><dd className="font-medium">{payment.expectedAmount}</dd></div>
-                    <div><dt className="text-muted-foreground">Destination</dt><dd className="mt-1 break-all font-mono text-xs">{payment.address}</dd></div>
-                    <div><dt className="text-muted-foreground">Payment reference</dt><dd className="mt-1 break-all font-mono text-xs">{payment.paymentReference}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Exact amount</dt><dd className="font-medium">{payment.expectedAmount} {payment.asset}</dd></div>
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Fiat reference</dt><dd className="font-medium">{money(priceCents / 100)} USD</dd></div>
+                    <div><dt className="text-muted-foreground">Wallet address</dt><dd className="mt-1 break-all font-mono text-[11px]">{payment.address}</dd></div>
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <dt className="text-muted-foreground">Payment reference</dt>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={handleCopyAddress}>
+                          <Clipboard className="mr-1 size-3.5" /> {copyState === "copied" ? "Copied" : "Copy"}
+                        </Button>
+                      </div>
+                      <dd className="mt-1 break-all font-mono text-[11px]">{payment.paymentReference}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4"><dt className="text-muted-foreground">Expiry</dt><dd className="font-medium">{payment.expiresAt ? new Date(payment.expiresAt).toLocaleString() : "Pending"}</dd></div>
                   </dl>
-                  <p className="mt-4 text-xs leading-5 text-muted-foreground">Send the exact amount on the selected network. The server verifies the blockchain payment before activating your purchase.</p>
+                  <p className="mt-4 text-xs leading-5 text-muted-foreground">Sent on the correct network to the displayed wallet only. The server verifies the on-chain transaction before activating your purchase.</p>
+                  <label className="mt-4 block text-xs text-muted-foreground" htmlFor="transaction-hash">
+                    Transaction hash hint
+                    <input
+                      id="transaction-hash"
+                      value={transactionHash}
+                      onChange={(event) => setTransactionHash(event.target.value)}
+                      placeholder="Paste the transaction hash after sending"
+                      className="mt-2 w-full rounded-tf-md border border-border bg-background px-3 py-2 font-mono text-xs text-foreground outline-none focus:border-primary"
+                      disabled={payment.status !== "payment_pending"}
+                    />
+                  </label>
                   <Button type="button" variant="outline" className="mt-4 w-full" onClick={handleRefreshStatus} disabled={isRefreshing}>
-                    {isRefreshing ? "Refreshing..." : "Refresh payment status"}
+                    {isRefreshing ? "Refreshing..." : "Check payment status"}
                   </Button>
                   {payment.status === "payment_pending" && <Button type="button" variant="ghost" className="mt-2 w-full" onClick={handleCancelOrder} disabled={isCancelling}>{isCancelling ? "Cancelling..." : "Cancel payment"}</Button>}
                   {payment.status === "paid" && <p className="mt-3 text-center text-sm font-medium text-success">Purchase activated successfully.</p>}

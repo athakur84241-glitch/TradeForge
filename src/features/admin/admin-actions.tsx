@@ -9,17 +9,21 @@ import { setChallengePlanActive } from "@/features/admin/admin-service";
 export function AdminPayoutActions({ payoutId, status }: { payoutId: string; status: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  async function transition(nextStatus: string) {
+  async function transition(nextStatus: string, reference?: string) {
     setBusy(true);
     try {
-      await adminSetPayoutStatus(payoutId, nextStatus);
+      await adminSetPayoutStatus(payoutId, nextStatus, reference);
       router.refresh();
     } finally {
       setBusy(false);
     }
   }
   if (status !== "pending" && status !== "approved" && status !== "processing") return null;
-  return <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void transition("approved")}>Approve</Button><Button type="button" size="sm" variant="danger" disabled={busy} onClick={() => void transition("rejected")}>Reject</Button>{status === "approved" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void transition("processing")}>Mark processing</Button>}</div>;
+  function settle() {
+    const reference = window.prompt("Enter the real payout settlement reference:");
+    if (reference?.trim()) void transition("paid", reference.trim());
+  }
+  return <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void transition("approved")}>Approve</Button><Button type="button" size="sm" variant="danger" disabled={busy} onClick={() => void transition("rejected")}>Reject</Button>{status === "approved" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void transition("processing")}>Mark processing</Button>}{status === "processing" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={settle}>Mark settled</Button>}</div>;
 }
 
 export function AdminPlanToggle({ planId, isActive }: { planId: string; isActive: boolean }) {

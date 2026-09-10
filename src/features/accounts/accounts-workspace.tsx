@@ -33,12 +33,21 @@ function statusTone(status: Account["status"]) {
   return "primary" as const;
 }
 
+function normalizeStatus(status: string | null | undefined): Account["status"] {
+  const normalized = status?.toLowerCase();
+  if (normalized === "funded") return "Funded";
+  if (normalized === "passed") return "Passed";
+  if (normalized === "failed") return "Failed";
+  if (normalized === "closed" || normalized === "archived") return "Archived";
+  return "Active";
+}
+
 export function AccountsWorkspace() {
   const [fetchedAccounts, setFetchedAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  function deriveCategory(status: Account['status'], phase: Account['phase'] | string | null) {
+  function deriveCategory(status: Account['status']) {
     if (status === 'Funded') return 'Funded';
     if (status === 'Passed') return 'Passed';
     if (status === 'Failed') return 'Failed';
@@ -93,8 +102,8 @@ export function AccountsWorkspace() {
           id: r.id,
           name: r.account_name,
           size: r.account_size ?? 0,
-          category: deriveCategory(r.status, r.phase),
-          status: (r.status as Account['status']) ?? 'Active',
+          category: deriveCategory(normalizeStatus(r.status)),
+          status: normalizeStatus(r.status),
           phase: (r.phase as Account['phase']) ?? 'Phase 1',
           balance: Number(r.balance ?? 0),
           equity: Number(r.equity ?? 0),

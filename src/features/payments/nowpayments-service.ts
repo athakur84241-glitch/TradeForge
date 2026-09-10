@@ -2,8 +2,9 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PaymentMethod } from "@/features/payments/payment-config";
 
 const currencyEnvByMethod: Record<PaymentMethod, string> = {
-  USDT_TRON: "NOWPAYMENTS_USDT_TRC20_CURRENCY",
+  USDT_TRC20: "NOWPAYMENTS_USDT_TRC20_CURRENCY",
   USDT_ERC20: "NOWPAYMENTS_USDT_ERC20_CURRENCY",
+  USDT_SOLANA: "NOWPAYMENTS_USDT_ERC20_CURRENCY",
   USDC_ERC20: "NOWPAYMENTS_USDC_ERC20_CURRENCY",
   SOL_SOLANA: "NOWPAYMENTS_SOL_CURRENCY",
 };

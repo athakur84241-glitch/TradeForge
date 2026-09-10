@@ -71,6 +71,15 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
+function normalizeAccountStatus(status: string | null): Account["status"] {
+  const normalized = status?.toLowerCase();
+  if (normalized === "funded") return "Funded";
+  if (normalized === "passed") return "Passed";
+  if (normalized === "failed") return "Failed";
+  if (normalized === "closed" || normalized === "archived") return "Archived";
+  return "Active";
+}
+
 function getDashboardHeaderDate() {
   const today = new Date();
   return new Intl.DateTimeFormat("en", { weekday: "long", day: "numeric", month: "long" }).format(today);
@@ -81,15 +90,9 @@ function getDashboardHeaderDescription(selectedAccount: DashboardAccount | null)
     return "Create your first evaluation account.";
   }
 
-  if (selectedAccount.phase === "Phase 1") {
-    return `Your Phase 1 evaluation is healthy. ${selectedAccount.name}.`;
-  }
-
-  if (selectedAccount.phase === "Funded" || selectedAccount.status === "Funded") {
-    return `Your funded account is healthy. ${selectedAccount.name}.`;
-  }
-
-  return `Your ${selectedAccount.phase} evaluation is healthy. ${selectedAccount.name}.`;
+  return selectedAccount.platform === "Not connected"
+    ? `${selectedAccount.name} is awaiting a trading provider connection.`
+    : `${selectedAccount.name} is ready for server-side account monitoring.`;
 }
 
 function getChartSeries(selectedAccount: DashboardAccount | null) {
@@ -110,34 +113,12 @@ function getRecentActivity(selectedAccount: DashboardAccount | null) {
 
   return [
     {
-      id: "account-loaded",
-      title: "Account loaded",
-      description: `${selectedAccount.name} is ready for review.`,
-      timestamp: "Live",
-    },
-    {
-      id: "balance-sync",
-      title: "Balance synced",
-      description: `${money(selectedAccount.balance)} is currently reflected for this account.`,
-      timestamp: "Live",
-    },
-    {
-      id: "equity-update",
-      title: "Equity updated",
-      description: `${money(selectedAccount.equity)} is the latest live equity value.`,
-      timestamp: "Live",
-    },
-    {
-      id: "phase-detected",
-      title: "Current phase detected",
-      description: selectedAccount.phase,
-      timestamp: "Live",
-    },
-    {
-      id: "status-verified",
-      title: "Status verified",
-      description: selectedAccount.status,
-      timestamp: "Live",
+      id: "provider-status",
+      title: selectedAccount.platform === "Not connected" ? "Trading provider unavailable" : "Provider connection available",
+      description: selectedAccount.platform === "Not connected"
+        ? "Live balances, trades, positions, and rule metrics will appear after the broker connection is configured."
+        : `${selectedAccount.name} is awaiting its next server-side provider sync.`,
+      timestamp: "Pending",
     },
   ];
 }
@@ -199,12 +180,12 @@ export function DashboardPage() {
           accountId: row.id,
           size: Number(row.account_size ?? 0),
           phase: (row.phase as Account["phase"]) ?? "Phase 2",
-          status: (row.status as Account["status"]) ?? "Active",
+          status: normalizeAccountStatus(row.status),
           balance: Number(row.balance ?? 0),
           equity: Number(row.equity ?? 0),
           pnl: Number(row.pnl ?? 0),
           pnlPercent: Number(row.pnl_percent ?? 0),
-          platform: row.platform ?? "TradeLocker",
+          platform: row.platform ?? "Not connected",
         }));
 
         if (mounted) {
@@ -242,7 +223,7 @@ export function DashboardPage() {
 
   const selectedAccount = accounts.find((account) => String(account.id) === String(selectedAccountId)) ?? accounts[0] ?? null;
 
-  const accountSize = selectedAccount?.size ?? 100000;
+  const accountSize = selectedAccount?.size ?? 0;
   const headerDate = getDashboardHeaderDate();
   const headerDescription = getDashboardHeaderDescription(selectedAccount);
   const chartSeries = getChartSeries(selectedAccount);
@@ -251,7 +232,7 @@ export function DashboardPage() {
   const balance = selectedAccount?.balance ?? 0;
   const equity = selectedAccount?.equity ?? 0;
   const tradingAvailable = Boolean(selectedAccount?.platform && selectedAccount.platform !== "Not connected");
-  const targetAmount = Math.max(6000, accountSize * 0.06);
+  const targetAmount = accountSize * 0.06;
   const targetRemaining = Math.max(0, targetAmount - currentProfit);
   const hasTradingActivity = Boolean(tradingAvailable && selectedAccount && (Math.abs(currentProfit) > 0 || selectedAccount.pnlPercent !== 0));
   const profitTargetProgress = hasTradingActivity ? clampPercent(selectedAccount?.pnlPercent ?? 0) : 0;
@@ -260,9 +241,9 @@ export function DashboardPage() {
   const tradingDaysValue = "—";
 
   const kpis = [
-    { label: "Balance", value: selectedAccount ? money(balance) : "—", detail: selectedAccount ? `${selectedAccount.phase} account balance` : "No account selected", icon: WalletCards, tone: "success" as const, trend: "up" as const },
-    { label: "Equity", value: selectedAccount ? money(equity) : "—", detail: selectedAccount ? `${money(currentProfit)} open PnL` : "No account selected", icon: Landmark, tone: "primary" as const, trend: "up" as const },
-    { label: "Current profit", value: selectedAccount ? `${currentProfit >= 0 ? "+" : ""}${money(currentProfit)}` : "—", detail: selectedAccount ? `${profitTargetProgress.toFixed(0)}% of phase target` : "No account selected", icon: TrendingUp, tone: "success" as const, trend: "up" as const },
+    { label: "Balance", value: tradingAvailable ? money(balance) : "Unavailable", detail: tradingAvailable ? `${selectedAccount?.phase} account balance` : "Trading provider not connected", icon: WalletCards, tone: "success" as const, trend: "flat" as const },
+    { label: "Equity", value: tradingAvailable ? money(equity) : "Unavailable", detail: tradingAvailable ? `${money(currentProfit)} open PnL` : "Trading provider not connected", icon: Landmark, tone: "primary" as const, trend: "flat" as const },
+    { label: "Current profit", value: tradingAvailable ? `${currentProfit >= 0 ? "+" : ""}${money(currentProfit)}` : "Unavailable", detail: tradingAvailable ? `${profitTargetProgress.toFixed(0)}% of phase target` : "Trading provider not connected", icon: TrendingUp, tone: "success" as const, trend: "flat" as const },
     { label: "Daily drawdown", value: tradingAvailable ? formatPercent(dailyDrawdownPercent) : "Unavailable", detail: tradingAvailable ? `${dailyDrawdownPercent.toFixed(1)}% limit used` : "Trading provider not configured", icon: Gauge, tone: "neutral" as const, trend: "flat" as const },
     { label: "Overall drawdown", value: tradingAvailable ? formatPercent(overallDrawdownPercent) : "Unavailable", detail: tradingAvailable ? `${overallDrawdownPercent.toFixed(1)}% limit used` : "Trading provider not configured", icon: ShieldCheck, tone: "neutral" as const, trend: "flat" as const },
     { label: "Profit target", value: tradingAvailable ? `${profitTargetProgress.toFixed(2)}%` : "Unavailable", detail: tradingAvailable ? `Target 6% · ${money(targetRemaining)} remaining` : "Trading provider not configured", icon: Target, tone: "warning" as const, trend: "flat" as const },
@@ -310,11 +291,11 @@ export function DashboardPage() {
             <ProgressBar value={overallDrawdownPercent} label="Maximum drawdown usage" detail={selectedAccount ? `${money(Math.max(0, accountSize - Math.min(equity, accountSize)))} / ${money(accountSize)}` : "Awaiting account activity"} tone="success" />
             <ProgressBar value={profitTargetProgress} label="Profit target progress" detail={selectedAccount ? `${money(currentProfit)} / ${money(targetAmount)}` : "Awaiting account activity"} tone="primary" />
             <div className="rounded-tf-md border border-success/20 bg-success/10 p-4">
-              <p className="flex items-center gap-2 text-sm font-semibold text-success">
-                <ShieldCheck className="size-4" /> Risk status: healthy
+                <p className="flex items-center gap-2 text-sm font-semibold text-warning">
+                <ShieldCheck className="size-4" /> Risk status: {tradingAvailable ? "pending sync" : "unavailable"}
               </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {selectedAccount ? `No active rule breaches for ${selectedAccount.name}. Daily and overall loss boundaries remain available.` : "No active rule breaches. Daily and overall loss boundaries have more than 70% capacity remaining."}
+                {tradingAvailable ? `No active rule breaches for ${selectedAccount?.name}. Daily and overall loss boundaries remain available.` : "Rule compliance is unavailable until a trading provider is connected."}
               </p>
               <div className="mt-3 grid gap-2 border-t border-success/10 pt-3 text-xs text-muted-foreground">
                 <div className="flex items-center justify-between">
@@ -327,11 +308,11 @@ export function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Market session</span>
-                  <span>Open</span>
+                  <span>{tradingAvailable ? "Available" : "Unavailable"}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Compliance score</span>
-                  <span>100%</span>
+                  <span>{tradingAvailable ? "Pending sync" : "Unavailable"}</span>
                 </div>
               </div>
             </div>
@@ -355,7 +336,7 @@ export function DashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge tone="primary">{selectedAccount.phase}</StatusBadge>
                 <StatusBadge tone="success">{selectedAccount.status}</StatusBadge>
-                <span className="text-xs text-muted-foreground">Last sync 2 minutes ago</span>
+                <span className="text-xs text-muted-foreground">{tradingAvailable ? "Provider data connected" : "Awaiting provider connection"}</span>
               </div>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {[

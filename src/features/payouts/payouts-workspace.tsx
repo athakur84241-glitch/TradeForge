@@ -37,8 +37,10 @@ function statusTone(status: Payout["status"]) {
 
 function RequestPayoutDialog({
   onSubmitted,
+  disabled = false,
 }: {
   onSubmitted: () => void;
+  disabled?: boolean;
 }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -71,9 +73,9 @@ const [submitError, setSubmitError] = useState<string | null>(null);
     // Get a funded account belonging to this user.
     const { data: account, error: accountError } = await supabase
   .from("accounts")
-  .select("id, account_name, status, user_id")
+  .select("id, account_name, status, user_id, provider_account_id")
   .eq("user_id", user.id)
-  .eq("status", "Funded")
+  .eq("status", "funded")
   .maybeSingle();
 
 
@@ -101,7 +103,7 @@ if (!account) {
   return (
     <Dialog.Root onOpenChange={(open) => !open && setSubmitted(false)}>
       <Dialog.Trigger asChild>
-        <Button>
+        <Button disabled={disabled}>
           <CircleDollarSign className="size-4" /> Request payout
         </Button>
       </Dialog.Trigger>
@@ -137,7 +139,7 @@ if (!account) {
   name="amount"
   type="number"
   min="100"
-  defaultValue="840"
+  defaultValue=""
   required
 />
                   
@@ -177,6 +179,8 @@ const [fundedAccount, setFundedAccount] = useState<{
   status: string;
   balance: number;
   equity: number;
+  starting_balance: number;
+  provider_account_id: string | null;
 } | null>(null);
 
 const [eligibilityLoading, setEligibilityLoading] = useState(true);
@@ -208,9 +212,9 @@ useEffect(() => {
 
 const { data: account, error: accountError } = await supabase
   .from("accounts")
-  .select("id, account_name, status, balance, equity")
+  .select("id, account_name, status, balance, equity, starting_balance, provider_account_id")
   .eq("user_id", user.id)
-  .eq("status", "Funded")
+  .eq("status", "funded")
   .maybeSingle();
 
 if (accountError) throw accountError;
@@ -289,12 +293,14 @@ const { data, error } = await payoutQuery;
   const completed = payouts.filter((payout) => payout.status === "Completed");
   const paidTotal = completed.reduce((sum, payout) => sum + payout.amount, 0);
   const availableReward = fundedAccount
-  ? Math.max(0, fundedAccount.equity - fundedAccount.balance)
+    ? fundedAccount.provider_account_id
+      ? Math.max(0, fundedAccount.equity - fundedAccount.starting_balance)
+      : 0
   : 0;
 
 const payoutEligible =
-  Boolean(fundedAccount) &&
-  fundedAccount!.status === "Funded" &&
+  Boolean(fundedAccount?.provider_account_id) &&
+  fundedAccount!.status === "funded" &&
   availableReward >= 100;
 
 const eligibilityText = eligibilityLoading
@@ -313,6 +319,7 @@ const eligibilityText = eligibilityLoading
         description="Review eligibility, payout methods, pending requests, and account history. Settlement remains subject to administrative review."
         action={
   <RequestPayoutDialog
+    disabled={!payoutEligible}
     onSubmitted={() => {
       window.location.reload();
     }}
@@ -324,8 +331,8 @@ const eligibilityText = eligibilityLoading
        <MetricCard
   label="Available reward"
   value={
-    fundedAccount
-      ? money(Math.max(0, fundedAccount.equity - fundedAccount.balance))
+    fundedAccount?.provider_account_id
+      ? money(Math.max(0, fundedAccount.equity - fundedAccount.starting_balance))
       : "—"
   }
   detail={
@@ -383,7 +390,7 @@ const eligibilityText = eligibilityLoading
   trend="flat"
   compact
 />
-        <MetricCard label="Completed total" value={money(paidTotal)} detail={`${completed.length} demo records`} icon={Banknote} tone="success" trend="up" compact />
+        <MetricCard label="Completed total" value={money(paidTotal)} detail={`${completed.length} settled requests`} icon={Banknote} tone="success" trend="up" compact />
       </section>
 
       <div className="grid gap-6 xl:grid-cols-12">
@@ -456,7 +463,7 @@ const eligibilityText = eligibilityLoading
 
       <SectionCard
         title="Payout history"
-        description="Pending, completed, and rejected demo requests."
+        description="Pending, completed, and rejected payout requests."
         action={
           <div className="flex rounded-tf-sm border border-border bg-surface p-1" aria-label="Filter payouts">
             {payoutTabs.map((tab) => (

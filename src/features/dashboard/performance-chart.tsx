@@ -32,16 +32,7 @@ export function PerformanceChart({ data = [], selectedAccount }: PerformanceChar
   const points = useMemo(() => {
     const hasHistoricalSeries = data.length > 1 && data.some((point, index) => index > 0 && (point.balance !== data[0].balance || point.equity !== data[0].equity));
 
-    if (!hasHistoricalSeries) {
-      const startingBalance = selectedAccount?.balance ?? selectedAccount?.equity ?? 100000;
-      return [
-        { date: "Week 1", balance: startingBalance, equity: startingBalance },
-        { date: "Week 2", balance: startingBalance, equity: startingBalance },
-        { date: "Week 3", balance: startingBalance, equity: startingBalance },
-        { date: "Week 4", balance: startingBalance, equity: startingBalance },
-        { date: "Week 5", balance: startingBalance, equity: startingBalance },
-      ];
-    }
+    if (!hasHistoricalSeries) return [];
 
     const maxItems = range === "3M" ? Math.max(data.length, 5) : Math.min(data.length, 5);
     return data.slice(-maxItems);
@@ -50,7 +41,7 @@ export function PerformanceChart({ data = [], selectedAccount }: PerformanceChar
   const chartTitle = selectedAccount?.name ? `${selectedAccount.name} balance vs equity` : "Balance vs equity";
   const latestEquity = points.at(-1)?.equity ?? 0;
   const latestBalance = points.at(-1)?.balance ?? 0;
-  const baseline = Math.max(latestEquity, latestBalance, selectedAccount?.balance ?? selectedAccount?.equity ?? 100000);
+  const baseline = Math.max(latestEquity, latestBalance, 1);
   const spread = Math.max(10000, baseline * 0.2);
   const domainMin = Math.max(0, baseline - spread);
   const domainMax = baseline + spread;
@@ -84,7 +75,11 @@ export function PerformanceChart({ data = [], selectedAccount }: PerformanceChar
         role="img"
         aria-label={`Balance and equity performance chart for ${selectedAccount?.name ?? "the selected account"}.`}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        {points.length === 0 ? (
+          <div className="grid h-full place-items-center text-sm text-muted-foreground">
+            Performance history unavailable until the trading provider is connected.
+          </div>
+        ) : <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={points} margin={{ top: 18, right: 12, left: 4, bottom: 0 }}>
             <defs>
               <linearGradient id="equity-fill" x1="0" y1="0" x2="0" y2="1">
@@ -141,7 +136,7 @@ export function PerformanceChart({ data = [], selectedAccount }: PerformanceChar
               isAnimationActive={false}
             />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-5 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-2">

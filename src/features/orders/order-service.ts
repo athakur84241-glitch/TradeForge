@@ -2,8 +2,9 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { PAYMENT_METHOD_ASSETS, PAYMENT_METHODS, type PaymentMethod, getPaymentMethodConfig, calculateExpectedAmount } from "@/features/payments/payment-config";
-import { createNowPaymentsRequest, isNowPaymentsConfigured } from "@/features/payments/nowpayments-service";
+import { PAYMENT_METHOD_ASSETS, PAYMENT_METHODS, type PaymentMethod, getConfiguredTokenAddress, getPaymentMethodConfig, calculateExpectedAmount, getPaymentQrPayload } from "@/features/payments/payment-config";
+import { reconcileWalletPayment } from "@/features/payments/direct-wallet-service";
+import { submitTransactionHash } from "@/features/payments/direct-wallet-service";
 
 type OrderRow = {
   id: string;
@@ -60,6 +61,7 @@ export type PaymentRequest = PendingOrder & {
   address: string;
   expectedAmount: string;
   paymentReference: string;
+  qrPayload: string;
   expiresAt: string;
 };
 
@@ -70,7 +72,7 @@ export async function createCryptoPaymentRequest(orderId: string, method: string
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("id, user_id, challenge_plan_id, account_size, amount_cents, currency, status, created_at, payment_method, payment_network, payment_address, expected_amount, expected_amount_atomic, payment_reference, payment_expires_at")
+    .select("id, user_id, challenge_plan_id, account_size, amount_cents, currency, status, created_at, payment_method, payment_network, payment_address, payment_token_address, expected_amount, expected_amount_atomic, payment_reference, payment_expires_at")
     .eq("id", orderId)
     .eq("user_id", user.id)
     .single();
@@ -88,31 +90,29 @@ export async function createCryptoPaymentRequest(orderId: string, method: string
     throw new Error("This order is no longer available for payment.");
   }
 
-  const nowPayment = !isReusable && isNowPaymentsConfigured()
-    ? await createNowPaymentsRequest({ orderId: order.id, amountCents: order.amount_cents, currency: order.currency, method: typedMethod })
-    : null;
-  const config = isReusable || nowPayment ? null : getPaymentMethodConfig(typedMethod);
-  const paymentReference = isReusable ? order.payment_reference : nowPayment?.paymentId ?? crypto.randomUUID();
+  const config = getPaymentMethodConfig(typedMethod);
   const expected = isReusable
     ? { amount: order.expected_amount, atomic: order.expected_amount_atomic }
-    : nowPayment
-      ? { amount: nowPayment.paymentAmount, atomic: nowPayment.paymentAmountAtomic }
-      : calculateExpectedAmount(order.amount_cents, config!);
-  const paymentAddress = isReusable ? order.payment_address : nowPayment?.paymentAddress ?? config?.address;
-  const paymentNetwork = isReusable ? order.payment_network : nowPayment?.paymentCurrency ?? config?.network;
-  const paymentExpiresAt = isReusable ? order.payment_expires_at : nowPayment?.expiresAt ?? expiresAt;
+    : calculateExpectedAmount(order.amount_cents, config);
+  const paymentReference = isReusable ? order.payment_reference : crypto.randomUUID();
+  const paymentAddress = isReusable ? order.payment_address : config.address;
+  const paymentNetwork = isReusable ? order.payment_network : config.network;
+  const paymentTokenAddress = isReusable ? order.payment_token_address : getConfiguredTokenAddress(config) ?? null;
+  const paymentExpiresAt = isReusable ? order.payment_expires_at : expiresAt;
+  const qrPayload = getPaymentQrPayload(paymentAddress, expected.amount, typedMethod);
 
   const { data: updated, error: updateError } = await admin
     .from("orders")
     .update({
       status: "payment_pending",
-      payment_provider: nowPayment ? "nowpayments" : "signed_webhook",
+      payment_provider: "direct_wallet",
       payment_method: typedMethod,
       payment_network: paymentNetwork,
       payment_address: paymentAddress,
+      payment_token_address: paymentTokenAddress,
       expected_amount: expected.amount,
       expected_amount_atomic: expected.atomic,
-      exchange_rate: nowPayment?.exchangeRate ?? (config?.rateUsd ?? null),
+      exchange_rate: config.rateUsd,
       rate_timestamp: new Date().toISOString(),
       payment_reference: paymentReference,
       payment_expires_at: paymentExpiresAt,
@@ -138,6 +138,7 @@ export async function createCryptoPaymentRequest(orderId: string, method: string
     address: updated.payment_address,
     expectedAmount: updated.expected_amount,
     paymentReference: updated.payment_reference,
+    qrPayload: qrPayload,
     expiresAt: updated.payment_expires_at,
   };
 }
@@ -148,12 +149,18 @@ export async function getOrderPaymentStatus(orderId: string): Promise<Pick<Pendi
   if (!user) throw new Error("You must be logged in to view this order.");
   const { data, error } = await supabase.from("orders").select("id, status, payment_expires_at").eq("id", orderId).eq("user_id", user.id).single();
   if (error || !data) throw new Error("Order not found.");
-  const isExpired = data.payment_expires_at && new Date(data.payment_expires_at).getTime() <= Date.now();
-  if (isExpired && data.status === "payment_pending") {
+
+  const status = await reconcileWalletPayment(data.id);
+  if (status.status === "expired" && data.status === "payment_pending") {
     const admin = createSupabaseAdminClient();
     await admin.from("orders").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", data.id).eq("status", "payment_pending");
   }
-  return { id: data.id, status: isExpired && data.status === "payment_pending" ? "expired" : data.status, expiresAt: data.payment_expires_at };
+
+  return {
+    id: data.id,
+    status: status.status === "confirmed" ? "paid" : status.status === "expired" ? "expired" : data.status,
+    expiresAt: data.payment_expires_at,
+  };
 }
 
 export async function cancelOrder(orderId: string) {
@@ -217,4 +224,9 @@ export async function getUserPurchases(): Promise<Purchase[]> {
     status: purchase.status,
     purchasedAt: purchase.purchased_at,
   }));
+}
+
+export async function checkOrderPayment(orderId: string, transactionHash?: string) {
+  if (transactionHash) await submitTransactionHash(orderId, transactionHash);
+  return getOrderPaymentStatus(orderId);
 }
