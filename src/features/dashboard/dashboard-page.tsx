@@ -29,7 +29,6 @@ import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import type { Account } from "@/features/workspace/types";
 import { supabase } from "@/lib/supabase";
-import { PerformanceChart } from "./performance-chart";
 
 type DashboardAccount = {
   id: string;
@@ -93,10 +92,6 @@ function getDashboardHeaderDescription(selectedAccount: DashboardAccount | null)
   return selectedAccount.platform === "Not connected"
     ? `${selectedAccount.name} is awaiting a trading provider connection.`
     : `${selectedAccount.name} is ready for server-side account monitoring.`;
-}
-
-function getChartSeries(selectedAccount: DashboardAccount | null) {
-  return [];
 }
 
 function getRecentActivity(selectedAccount: DashboardAccount | null) {
@@ -226,7 +221,6 @@ export function DashboardPage() {
   const accountSize = selectedAccount?.size ?? 0;
   const headerDate = getDashboardHeaderDate();
   const headerDescription = getDashboardHeaderDescription(selectedAccount);
-  const chartSeries = getChartSeries(selectedAccount);
   const recentActivity = getRecentActivity(selectedAccount);
   const currentProfit = selectedAccount?.pnl ?? 0;
   const balance = selectedAccount?.balance ?? 0;
@@ -257,9 +251,11 @@ export function DashboardPage() {
         description={headerDescription}
         action={
           <div className="flex items-center gap-2">
-            <DemoAction confirmation="Demo platform opened">
+            <Button asChild>
+              <Link href="/trade">
               Open trading platform <ArrowRight className="size-4" />
-            </DemoAction>
+              </Link>
+            </Button>
           </div>
         }
       />
@@ -270,20 +266,10 @@ export function DashboardPage() {
         ))}
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-12">
-        <SectionCard
-          title="Performance"
-          description="Evaluation equity curve through the current session."
-          className="xl:col-span-8"
-          contentClassName="p-4 sm:p-5"
-        >
-          <PerformanceChart data={chartSeries} selectedAccount={selectedAccount} />
-        </SectionCard>
-
+      <div className="grid gap-6">
         <SectionCard
           title="Risk overview"
           description="Limit usage and account compliance."
-          className="xl:col-span-4"
           action={<StatusBadge tone={selectedAccount?.status === "Active" ? "success" : "primary"}>{selectedAccount?.status ?? "Active"}</StatusBadge>}
         >
           <div className="grid gap-6">
