@@ -54,6 +54,12 @@ export function updatePosition(position: PaperPosition, price: number, now = new
   };
 }
 
+export function closePosition(position: PaperPosition, price: number, reason: "manual" | "stop_loss" | "take_profit", now = new Date().toISOString()): PaperPosition {
+  if (position.status === "closed") return position;
+  const currentPrice = Number(price.toFixed(8));
+  return { ...position, currentPrice, unrealizedPnl: calculatePnl({ ...position, currentPrice }), status: "closed", closedAt: now, closeReason: reason };
+}
+
 export function createPaperPosition(input: {
   accountId: string;
   symbol: string;

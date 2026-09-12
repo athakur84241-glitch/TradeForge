@@ -2,15 +2,20 @@ export const DEMO_TIMEFRAMES = ["1m", "5m", "15m", "1H", "4H", "1D"] as const;
 export type DemoTimeframe = (typeof DEMO_TIMEFRAMES)[number];
 
 export const DEMO_INSTRUMENTS = [
-  { symbol: "XAUUSD", name: "Gold / US Dollar", basePrice: 2350 },
-  { symbol: "US30", name: "Dow Jones", basePrice: 39000 },
-  { symbol: "NAS100", name: "Nasdaq 100", basePrice: 18000 },
-  { symbol: "USOIL", name: "WTI Crude Oil", basePrice: 78 },
-  { symbol: "EURUSD", name: "Euro / US Dollar", basePrice: 1.085 },
-  { symbol: "GBPUSD", name: "Pound / US Dollar", basePrice: 1.27 },
-  { symbol: "USDJPY", name: "US Dollar / Yen", basePrice: 149.5 },
+  { symbol: "XAUUSD", name: "Gold / US Dollar", basePrice: 2350, assetClass: "metals", historicalStart: null, historicalEnd: null, sourceType: "demo-continuation" },
+  { symbol: "US30", name: "Dow Jones", basePrice: 39000, assetClass: "index", historicalStart: null, historicalEnd: null, sourceType: "demo-continuation" },
+  { symbol: "NAS100", name: "Nasdaq 100", basePrice: 18000, assetClass: "index", historicalStart: null, historicalEnd: null, sourceType: "demo-continuation" },
+  { symbol: "USOIL", name: "WTI Crude Oil", basePrice: 78, assetClass: "energy", historicalStart: null, historicalEnd: null, sourceType: "demo-continuation" },
+  { symbol: "EURUSD", name: "Euro / US Dollar", basePrice: 1.085, assetClass: "forex", historicalStart: null, historicalEnd: null, sourceType: "demo-continuation" },
+  { symbol: "GBPUSD", name: "Pound / US Dollar", basePrice: 1.27, assetClass: "forex", historicalStart: null, historicalEnd: null, sourceType: "demo-continuation" },
+  { symbol: "USDJPY", name: "US Dollar / Yen", basePrice: 149.5, assetClass: "forex", historicalStart: null, historicalEnd: null, sourceType: "demo-continuation" },
 ] as const;
 export type DemoInstrument = (typeof DEMO_INSTRUMENTS)[number];
+export type InstrumentDefinition = DemoInstrument;
+
+export function getInstrumentDefinition(symbol: string): InstrumentDefinition {
+  return DEMO_INSTRUMENTS.find((item) => item.symbol === symbol) ?? DEMO_INSTRUMENTS[0];
+}
 
 export type DemoCandle = { time: number; open: number; high: number; low: number; close: number };
 type PriceListener = (price: number, candle: DemoCandle) => void;
@@ -31,7 +36,7 @@ function seededNoise(seed: number) {
 }
 
 function startOfMinute(timestamp: number) { return Math.floor(timestamp / 60) * 60; }
-function instrument(symbol: string) { return DEMO_INSTRUMENTS.find((item) => item.symbol === symbol) ?? DEMO_INSTRUMENTS[0]; }
+function instrument(symbol: string) { return getInstrumentDefinition(symbol); }
 
 function createHistory(symbol: string, count = 5000) {
   const definition = instrument(symbol);
@@ -68,13 +73,21 @@ export interface MarketDataProvider {
   subscribe(symbol: string, onPrice: PriceListener, onConnection?: ConnectionListener): () => void;
 }
 
-export class DemoMarketProvider implements MarketDataProvider {
+export class HistoricalMarketDataProvider implements MarketDataProvider {
   private states = new Map<string, SymbolState>();
+  private datasets = new Map<string, DemoCandle[]>();
+
+  registerDataset(symbol: string, candles: DemoCandle[]) {
+    if (!DEMO_INSTRUMENTS.some((item) => item.symbol === symbol) || candles.some((candle) => !Number.isFinite(candle.time + candle.open + candle.high + candle.low + candle.close))) return false;
+    this.datasets.set(symbol, candles.slice().sort((left, right) => left.time - right.time));
+    this.states.delete(symbol);
+    return true;
+  }
 
   private getState(symbol: string) {
     let state = this.states.get(symbol);
     if (!state) {
-      const history = createHistory(symbol);
+      const history = this.datasets.get(symbol)?.slice() ?? createHistory(symbol);
       state = { price: history.at(-1)?.close ?? instrument(symbol).basePrice, tick: 0, history, listeners: new Set(), connectionListeners: new Set(), timer: null };
       this.states.set(symbol, state);
     }
@@ -114,5 +127,7 @@ export class DemoMarketProvider implements MarketDataProvider {
     for (const listener of state.listeners) listener(state.price, candle);
   }
 }
+
+export class DemoMarketProvider extends HistoricalMarketDataProvider {}
 
 export const demoMarketProvider = new DemoMarketProvider();

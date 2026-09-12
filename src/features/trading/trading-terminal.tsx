@@ -6,13 +6,14 @@ import { CircleDot, RefreshCw, ShieldAlert, TrendingDown, TrendingUp } from "luc
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import { supabase } from "@/lib/supabase";
-import { DEMO_INSTRUMENTS, DEMO_TIMEFRAMES, demoMarketProvider, type DemoTimeframe } from "./demo-market-provider";
-import { createPaperPosition, updatePosition, type PaperPosition, type PaperSide } from "./paper-trading-engine";
+import { DEMO_INSTRUMENTS, DEMO_TIMEFRAMES, demoMarketProvider, getInstrumentDefinition, type DemoTimeframe } from "./demo-market-provider";
+import { closePosition, createPaperPosition, updatePosition, type PaperPosition, type PaperSide } from "./paper-trading-engine";
 
 const timeframeLabels: Record<DemoTimeframe, string> = { "1m": "1m", "5m": "5m", "15m": "15m", "1H": "1H", "4H": "4H", "1D": "1D" };
 
 type PositionRow = {
   id: string;
+  user_id: string;
   account_id: string;
   symbol: string;
   side: PaperSide;
@@ -40,9 +41,10 @@ function rowToPosition(row: PositionRow): PaperPosition {
   return { ...row, accountId: row.account_id, entryPrice: Number(row.entry_price), currentPrice: Number(row.current_price), stopLoss: row.stop_loss === null ? null : Number(row.stop_loss), takeProfit: row.take_profit === null ? null : Number(row.take_profit), unrealizedPnl: Number(row.unrealized_pnl), openedAt: row.opened_at, closedAt: row.closed_at, closeReason: row.close_reason };
 }
 
-function positionToRow(position: PaperPosition) {
+function positionToRow(position: PaperPosition, userId: string) {
   return {
     id: position.id,
+    user_id: userId,
     account_id: position.accountId,
     symbol: position.symbol,
     side: position.side,
@@ -73,6 +75,7 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
   const [symbol, setSymbol] = useState("XAUUSD");
   const [price, setPrice] = useState(() => demoMarketProvider.getCurrentPrice("XAUUSD"));
   const [accountId, setAccountId] = useState(initialAccountId);
+  const [userId, setUserId] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string }>>([]);
   const [connection, setConnection] = useState<"connected" | "reconnecting" | "disconnected">("connected");
   const [positions, setPositions] = useState<PaperPosition[]>([]);
@@ -83,14 +86,18 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
   const [message, setMessage] = useState("Paper environment only. No real orders are sent.");
 
   useEffect(() => {
+    let active = true;
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (active) setUserId(user?.id ?? null);
+    });
     if (initialAccountId) {
       setAccountId(initialAccountId);
-      return;
+      return () => { active = false; };
     }
-    let active = true;
     async function loadAccounts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
       const { data } = await supabase.from("accounts").select("id, account_name").eq("user_id", user.id).order("created_at", { ascending: false });
       if (!active) return;
       const options = (data ?? []).map((row) => ({ id: row.id, name: row.account_name }));
@@ -163,7 +170,9 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
       if (persistTimerRef.current !== null) window.clearTimeout(persistTimerRef.current);
       persistTimerRef.current = window.setTimeout(async () => {
         for (const position of next.filter((item) => item.status === "closed")) {
-          await supabase.from("demo_positions").update(positionToRow(position)).eq("id", position.id).eq("account_id", accountId);
+          if (!userId) return;
+          const { error } = await supabase.from("demo_positions").update(positionToRow(position, userId)).eq("id", position.id).eq("account_id", accountId).eq("user_id", userId).eq("status", "open");
+          if (error) setMessage("A paper position changed locally but could not be persisted.");
         }
       }, 500);
     }
@@ -189,7 +198,7 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
       document.removeEventListener("visibilitychange", handleVisibility);
       unsubscribe();
     };
-  }, [symbol, accountId]);
+  }, [symbol, accountId, userId]);
 
   useEffect(() => {
     const series = candleSeriesRef.current;
@@ -211,11 +220,25 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
     const parsedTarget = takeProfit ? Number(takeProfit) : null;
     if (parsedStop !== null && !Number.isFinite(parsedStop)) return setMessage("Stop loss must be a valid price.");
     if (parsedTarget !== null && !Number.isFinite(parsedTarget)) return setMessage("Take profit must be a valid price.");
+    if ((side === "buy" && parsedStop !== null && parsedStop >= price) || (side === "sell" && parsedStop !== null && parsedStop <= price)) return setMessage("Stop loss must be below the entry for buys and above it for sells.");
+    if ((side === "buy" && parsedTarget !== null && parsedTarget <= price) || (side === "sell" && parsedTarget !== null && parsedTarget >= price)) return setMessage("Take profit must be above the entry for buys and below it for sells.");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return setMessage("Your session expired. Sign in again to place a paper order.");
+    setUserId(user.id);
     const position = createPaperPosition({ accountId, symbol, side, quantity: parsedQuantity, entryPrice: price, stopLoss: parsedStop, takeProfit: parsedTarget });
-    const { error } = await supabase.from("demo_positions").insert(positionToRow(position));
-    if (error) return setMessage("Paper position could not be saved.");
-    replacePositions([position, ...positionsRef.current]);
+    const { data, error } = await supabase.from("demo_positions").insert(positionToRow(position, user.id)).select().single();
+    if (error || !data) return setMessage(`Paper position could not be saved: ${error?.message ?? "no position returned"}`);
+    replacePositions([rowToPosition(data as PositionRow), ...positionsRef.current]);
     setMessage(`${side === "buy" ? "Buy" : "Sell"} paper position opened at ${formatPrice(price)}.`);
+  }
+
+  async function manuallyClose(position: PaperPosition) {
+    if (position.status === "closed" || !userId) return;
+    const closed = closePosition(position, demoMarketProvider.getCurrentPrice(position.symbol), "manual");
+    const { error } = await supabase.from("demo_positions").update(positionToRow(closed, userId)).eq("id", position.id).eq("account_id", closed.accountId).eq("user_id", userId).eq("status", "open");
+    if (error) return setMessage(`Paper position could not be closed: ${error.message}`);
+    replacePositions(positionsRef.current.map((item) => item.id === position.id ? closed : item));
+    setMessage(`${position.symbol} paper position closed at ${formatPrice(closed.currentPrice)}.`);
   }
 
   const openPositions = positions.filter((position) => position.status === "open");
@@ -228,14 +251,14 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
         <div className="flex items-center gap-2"><StatusBadge tone={connection === "connected" ? "success" : "warning"}>{connection}</StatusBadge><span className="font-mono text-sm">{formatPrice(price)}</span></div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface/60 p-3">
-        <div className="flex flex-wrap items-center gap-2"><select value={symbol} onChange={(event) => setSymbol(event.target.value)} className="h-9 rounded border border-border bg-background px-3 text-sm font-semibold text-foreground">{DEMO_INSTRUMENTS.map((item) => <option key={item.symbol} value={item.symbol}>{item.symbol}</option>)}</select>{accounts.length > 0 && <select value={accountId ?? ""} onChange={(event) => setAccountId(event.target.value || null)} className="h-9 max-w-52 rounded border border-border bg-background px-3 text-sm text-foreground">{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>}<span className="text-xs text-muted-foreground">{DEMO_INSTRUMENTS.find((item) => item.symbol === symbol)?.name}</span></div>
+        <div className="flex flex-wrap items-center gap-2"><select value={symbol} onChange={(event) => setSymbol(event.target.value)} className="h-9 rounded border border-border bg-background px-3 text-sm font-semibold text-foreground">{DEMO_INSTRUMENTS.map((item) => <option key={item.symbol} value={item.symbol}>{item.symbol}</option>)}</select>{accounts.length > 0 && <select value={accountId ?? ""} onChange={(event) => setAccountId(event.target.value || null)} className="h-9 max-w-52 rounded border border-border bg-background px-3 text-sm text-foreground">{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>}<span className="text-xs text-muted-foreground">{getInstrumentDefinition(symbol).name} · {getInstrumentDefinition(symbol).sourceType}</span></div>
         <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-1">{DEMO_TIMEFRAMES.map((item) => <button key={item} type="button" onClick={() => setTimeframe(item)} className={`rounded px-3 py-1.5 text-xs font-semibold ${timeframe === item ? "bg-primary-solid text-primary-solid-foreground" : "text-muted-foreground hover:text-foreground"}`}>{timeframeLabels[item]}</button>)}</div><div className="flex items-center gap-2 text-xs text-muted-foreground"><RefreshCw className="size-3.5" /> Live demo stream</div></div>
       </div>
       <div ref={chartContainerRef} className="h-[420px] w-full" />
       <div className="grid gap-4 border-t border-border p-4 lg:grid-cols-[1fr_260px]">
         <div>
           <div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-semibold">Paper positions</p><p className="text-xs text-muted-foreground">Open and closed demo positions for this TradeForge account.</p></div><p className={`font-mono text-sm ${totalPnl >= 0 ? "text-success" : "text-danger"}`}>Open P&amp;L {formatPnl(totalPnl)}</p></div>
-          {loadingPositions ? <p className="py-8 text-center text-sm text-muted-foreground">Restoring paper positions...</p> : positions.length === 0 ? <p className="rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No paper positions yet.</p> : <div className="grid gap-2">{positions.slice(0, 8).map((position) => <div key={position.id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-3 text-xs"><div className="flex items-center gap-2"><span className={position.side === "buy" ? "text-success" : "text-danger"}>{position.side === "buy" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}</span><span className="font-semibold">{position.side.toUpperCase()} {position.quantity}</span><span className="text-muted-foreground">@ {formatPrice(position.entryPrice)}</span></div><div className="flex items-center gap-3"><StatusBadge tone={position.status === "open" ? "primary" : "neutral"}>{position.status}</StatusBadge><span className={position.unrealizedPnl >= 0 ? "text-success" : "text-danger"}>{formatPnl(position.unrealizedPnl)}</span></div></div>)}</div>}
+          {loadingPositions ? <p className="py-8 text-center text-sm text-muted-foreground">Restoring paper positions...</p> : positions.length === 0 ? <p className="rounded border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No paper positions yet.</p> : <div className="grid gap-2">{positions.slice(0, 8).map((position) => <div key={position.id} className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-surface p-3 text-xs"><div className="grid gap-1"><div className="flex items-center gap-2"><span className={position.side === "buy" ? "text-success" : "text-danger"}>{position.side === "buy" ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}</span><span className="font-semibold">{position.symbol} {position.side.toUpperCase()} {position.quantity}</span><span className="text-muted-foreground">Entry {formatPrice(position.entryPrice)} · Exit {position.status === "closed" ? formatPrice(position.currentPrice) : formatPrice(demoMarketProvider.getCurrentPrice(position.symbol))}</span>{position.status === "open" && <button type="button" className="text-warning hover:text-foreground" onClick={() => void manuallyClose(position)}>Close</button>}</div><span className="text-muted-foreground">SL {position.stopLoss === null ? "-" : formatPrice(position.stopLoss)} · TP {position.takeProfit === null ? "-" : formatPrice(position.takeProfit)}{position.closeReason ? ` · ${position.closeReason.replace("_", " ")}` : ""}</span></div><div className="flex items-center gap-3"><StatusBadge tone={position.status === "open" ? "primary" : "neutral"}>{position.status}</StatusBadge><span className={position.unrealizedPnl >= 0 ? "text-success" : "text-danger"}>{formatPnl(position.unrealizedPnl)}</span></div></div>)}</div>}
         </div>
         <div className="rounded border border-border bg-surface p-4"><p className="text-sm font-semibold">Paper order</p><p className="mt-1 text-xs text-muted-foreground">Set optional levels before opening.</p><div className="mt-4 grid gap-3"><label className="grid gap-1 text-xs text-muted-foreground">Quantity<input value={quantity} onChange={(event) => setQuantity(event.target.value)} type="number" min="0.01" step="0.01" className="h-9 rounded border border-border bg-background px-2 text-sm text-foreground" /></label><label className="grid gap-1 text-xs text-muted-foreground">Stop loss<input value={stopLoss} onChange={(event) => setStopLoss(event.target.value)} type="number" min="0" step="0.01" placeholder="Optional" className="h-9 rounded border border-border bg-background px-2 text-sm text-foreground" /></label><label className="grid gap-1 text-xs text-muted-foreground">Take profit<input value={takeProfit} onChange={(event) => setTakeProfit(event.target.value)} type="number" min="0" step="0.01" placeholder="Optional" className="h-9 rounded border border-border bg-background px-2 text-sm text-foreground" /></label><div className="grid grid-cols-2 gap-2"><Button type="button" onClick={() => void openPosition("buy")}><TrendingUp className="size-4" /> Buy</Button><Button type="button" variant="danger" onClick={() => void openPosition("sell")}><TrendingDown className="size-4" /> Sell</Button></div></div></div>
       </div>
