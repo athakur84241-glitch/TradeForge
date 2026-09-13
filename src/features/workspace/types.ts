@@ -7,7 +7,7 @@ export type Account = {
   name: string;
   size: number;
   category: AccountCategory;
-  status: "Active" | "Funded" | "Passed" | "Failed" | "Archived";
+  status: "Active" | "Provisioning" | "Funded" | "Passed" | "Failed" | "Archived";
   phase: "Phase 1" | "Phase 2" | "Funded" | "Complete";
   balance: number;
   equity: number;

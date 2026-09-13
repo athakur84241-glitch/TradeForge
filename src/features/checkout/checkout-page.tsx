@@ -392,7 +392,7 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                     {isRefreshing ? "Refreshing..." : "Check payment status"}
                   </Button>
                   {payment.status === "payment_pending" && <Button type="button" variant="ghost" className="mt-2 w-full" onClick={handleCancelOrder} disabled={isCancelling}>{isCancelling ? "Cancelling..." : "Cancel payment"}</Button>}
-                  {payment.status === "paid" && <p className="mt-3 text-center text-sm font-medium text-success">Purchase activated successfully.</p>}
+                  {payment.status === "paid" && <div className="mt-3 text-center text-sm font-medium text-success"><p>Payment verified and purchase activated.</p><Link href="/accounts" className="mt-2 inline-block text-primary underline-offset-4 hover:underline">View account provisioning status</Link><p className="mt-2 text-xs font-normal text-muted-foreground">Trading provider provisioning remains pending until a real provider is configured.</p></div>}
                 </div>
               )}
 

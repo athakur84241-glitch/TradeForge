@@ -35,6 +35,7 @@ function statusTone(status: Account["status"]) {
 
 function normalizeStatus(status: string | null | undefined): Account["status"] {
   const normalized = status?.toLowerCase();
+  if (normalized === "funded_pending_integration") return "Provisioning";
   if (normalized === "funded") return "Funded";
   if (normalized === "passed") return "Passed";
   if (normalized === "failed") return "Failed";
@@ -145,10 +146,11 @@ export function AccountsWorkspace() {
       .sort((left, right) => {
         const statusOrder: Record<Account["status"], number> = {
           Active: 0,
-          Funded: 1,
-          Passed: 2,
-          Failed: 3,
-          Archived: 4,
+          Provisioning: 1,
+          Funded: 2,
+          Passed: 3,
+          Failed: 4,
+          Archived: 5,
         };
         const result = sortKey === "status"
           ? statusOrder[left.status] - statusOrder[right.status]

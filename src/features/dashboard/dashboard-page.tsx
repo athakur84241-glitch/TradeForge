@@ -72,6 +72,7 @@ function clampPercent(value: number) {
 
 function normalizeAccountStatus(status: string | null): Account["status"] {
   const normalized = status?.toLowerCase();
+  if (normalized === "funded_pending_integration") return "Provisioning";
   if (normalized === "funded") return "Funded";
   if (normalized === "passed") return "Passed";
   if (normalized === "failed") return "Failed";
