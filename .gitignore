@@ -1,6 +1,8 @@
 .next/
 node_modules/
 work/
+data/raw/
+data/normalized/
 *.tsbuildinfo
 .env
 .env.local

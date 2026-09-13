@@ -1,0 +1,28 @@
+{
+  "datasets": [
+    {
+      "symbol": "XAUUSD",
+      "source": "GetData Finance XAUUSD 12-hour evaluation sample",
+      "sourceUrl": "https://github.com/getdata-finance/xauusd-12h-ohlcv-metals-historical-data",
+      "sourceType": "reference-gold-spot",
+      "timeframe": "1D",
+      "earliestAvailable": "2026-03-12T00:00:00.000Z",
+      "latestAvailable": "2026-09-11T00:00:00.000Z",
+      "recordCount": 158,
+      "isSynthetic": false,
+      "licenseUsageNote": "MIT repository license; represents gold reference/spot data, not broker-specific CFD data",
+      "datasetPath": "data/normalized/xauusd-1d.json"
+    }
+  ],
+  "candidates": [
+    {
+      "symbol": "XAUUSD",
+      "source": "GetData Finance XAUUSD 12-hour evaluation sample",
+      "sourceUrl": "https://github.com/getdata-finance/xauusd-12h-ohlcv-metals-historical-data",
+      "sourceType": "reference-gold-spot",
+      "timeframe": "12H",
+      "licenseUsageNote": "MIT repository license; represents gold reference/spot data, not broker-specific CFD data",
+      "status": "verified-source-not-downloaded"
+    }
+  ]
+}

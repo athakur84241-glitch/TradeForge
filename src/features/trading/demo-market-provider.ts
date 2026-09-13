@@ -76,13 +76,24 @@ export interface MarketDataProvider {
 export class HistoricalMarketDataProvider implements MarketDataProvider {
   private states = new Map<string, SymbolState>();
   private datasets = new Map<string, DemoCandle[]>();
+  private datasetTimeframes = new Map<string, DemoTimeframe>();
+  private historicalSymbols = new Set<string>();
 
-  registerDataset(symbol: string, candles: DemoCandle[]) {
+  registerDataset(symbol: string, candles: DemoCandle[], timeframe: DemoTimeframe) {
     if (!DEMO_INSTRUMENTS.some((item) => item.symbol === symbol) || candles.some((candle) => !Number.isFinite(candle.time + candle.open + candle.high + candle.low + candle.close))) return false;
     this.datasets.set(symbol, candles.slice().sort((left, right) => left.time - right.time));
+    this.datasetTimeframes.set(symbol, timeframe);
+    this.historicalSymbols.add(symbol);
     this.states.delete(symbol);
     return true;
   }
+
+  getAvailableTimeframes(symbol: string) {
+    const datasetTimeframe = this.datasetTimeframes.get(symbol);
+    return datasetTimeframe ? [datasetTimeframe] : DEMO_TIMEFRAMES;
+  }
+
+  getSourceType(symbol: string) { return this.historicalSymbols.has(symbol) ? "historical + demo-continuation" : "demo-continuation"; }
 
   private getState(symbol: string) {
     let state = this.states.get(symbol);
@@ -94,7 +105,11 @@ export class HistoricalMarketDataProvider implements MarketDataProvider {
     return state;
   }
 
-  getHistoricalCandles(symbol: string, timeframe: DemoTimeframe, count = 180) { return aggregate(this.getState(symbol).history, timeframe, count); }
+  getHistoricalCandles(symbol: string, timeframe: DemoTimeframe, count = 180) {
+    const datasetTimeframe = this.datasetTimeframes.get(symbol);
+    if (datasetTimeframe && datasetTimeframe !== timeframe) return [];
+    return aggregate(this.getState(symbol).history, timeframe, count);
+  }
   getCurrentPrice(symbol: string) { return this.getState(symbol).price; }
 
   subscribe(symbol: string, onPrice: PriceListener, onConnection?: ConnectionListener) {

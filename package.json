@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "validate:historical": "node scripts/validate-historical-data.mjs",
+    "ingest:historical": "node scripts/ingest-historical-data.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",

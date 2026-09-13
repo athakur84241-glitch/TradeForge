@@ -6,7 +6,7 @@ import { CircleDot, RefreshCw, ShieldAlert, TrendingDown, TrendingUp } from "luc
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import { supabase } from "@/lib/supabase";
-import { DEMO_INSTRUMENTS, DEMO_TIMEFRAMES, demoMarketProvider, getInstrumentDefinition, type DemoTimeframe } from "./demo-market-provider";
+import { DEMO_INSTRUMENTS, demoMarketProvider, getInstrumentDefinition, type DemoTimeframe } from "./demo-market-provider";
 import { closePosition, createPaperPosition, updatePosition, type PaperPosition, type PaperSide } from "./paper-trading-engine";
 
 const timeframeLabels: Record<DemoTimeframe, string> = { "1m": "1m", "5m": "5m", "15m": "15m", "1H": "1H", "4H": "4H", "1D": "1D" };
@@ -84,6 +84,28 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
   const [takeProfit, setTakeProfit] = useState("");
   const [loadingPositions, setLoadingPositions] = useState(false);
   const [message, setMessage] = useState("Paper environment only. No real orders are sent.");
+  const [historicalVersion, setHistoricalVersion] = useState(0);
+  const availableTimeframes = demoMarketProvider.getAvailableTimeframes(symbol);
+
+  useEffect(() => {
+    let active = true;
+    async function loadHistoricalData() {
+      const response = await fetch(`/api/market-data/historical?symbol=${symbol}`);
+      if (!response.ok || !active) return;
+      const dataset = await response.json() as { candles?: Array<{ time: number; open: number; high: number; low: number; close: number }>; timeframe?: DemoTimeframe };
+      if (dataset.timeframe && dataset.candles?.length) {
+        demoMarketProvider.registerDataset(symbol, dataset.candles, dataset.timeframe);
+        setHistoricalVersion((version) => version + 1);
+      }
+      if (active) setTimeframe((current) => dataset.timeframe && current !== dataset.timeframe ? dataset.timeframe : current);
+    }
+    void loadHistoricalData();
+    return () => { active = false; };
+  }, [symbol]);
+
+  useEffect(() => {
+    if (!availableTimeframes.includes(timeframe)) setTimeframe(availableTimeframes[0] ?? "1D");
+  }, [availableTimeframes, timeframe, historicalVersion]);
 
   useEffect(() => {
     let active = true;
@@ -252,7 +274,7 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface/60 p-3">
         <div className="flex flex-wrap items-center gap-2"><select value={symbol} onChange={(event) => setSymbol(event.target.value)} className="h-9 rounded border border-border bg-background px-3 text-sm font-semibold text-foreground">{DEMO_INSTRUMENTS.map((item) => <option key={item.symbol} value={item.symbol}>{item.symbol}</option>)}</select>{accounts.length > 0 && <select value={accountId ?? ""} onChange={(event) => setAccountId(event.target.value || null)} className="h-9 max-w-52 rounded border border-border bg-background px-3 text-sm text-foreground">{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select>}<span className="text-xs text-muted-foreground">{getInstrumentDefinition(symbol).name} · {getInstrumentDefinition(symbol).sourceType}</span></div>
-        <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-1">{DEMO_TIMEFRAMES.map((item) => <button key={item} type="button" onClick={() => setTimeframe(item)} className={`rounded px-3 py-1.5 text-xs font-semibold ${timeframe === item ? "bg-primary-solid text-primary-solid-foreground" : "text-muted-foreground hover:text-foreground"}`}>{timeframeLabels[item]}</button>)}</div><div className="flex items-center gap-2 text-xs text-muted-foreground"><RefreshCw className="size-3.5" /> Live demo stream</div></div>
+        <div className="flex flex-wrap items-center gap-2"><div className="flex items-center gap-1">{availableTimeframes.map((item) => <button key={item} type="button" onClick={() => setTimeframe(item)} className={`rounded px-3 py-1.5 text-xs font-semibold ${timeframe === item ? "bg-primary-solid text-primary-solid-foreground" : "text-muted-foreground hover:text-foreground"}`}>{timeframeLabels[item]}</button>)}</div><div className="flex items-center gap-2 text-xs text-muted-foreground"><RefreshCw className="size-3.5" /> {demoMarketProvider.getSourceType(symbol)}</div></div>
       </div>
       <div ref={chartContainerRef} className="h-[420px] w-full" />
       <div className="grid gap-4 border-t border-border p-4 lg:grid-cols-[1fr_260px]">
