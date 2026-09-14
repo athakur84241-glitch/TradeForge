@@ -1,0 +1,4 @@
+import { PageHeader } from "@/components/workspace/page-header";
+import { SectionCard } from "@/components/workspace/section-card";
+
+export default function AdminSettingsPage() { return <div className="grid gap-6"><PageHeader eyebrow="Admin / Settings" title="Operations settings" description="Configuration visibility for the current milestone." /><SectionCard title="Provider readiness"><div className="grid gap-3 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Payment provider</span><strong>Direct wallet verification</strong></div><div className="flex justify-between"><span className="text-muted-foreground">Broker integration</span><strong>Unavailable</strong></div><div className="flex justify-between"><span className="text-muted-foreground">Payout settlement</span><strong>Manual</strong></div></div></SectionCard></div>; }

@@ -4,6 +4,7 @@ import { createSupabaseMiddlewareClient } from "@/lib/supabase-middleware";
 
 const PROTECTED_PATHS = [
   "/",
+  "/admin",
   "/accounts",
   "/challenges",
   "/payouts",
@@ -69,6 +70,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
+    "/admin/:path*",
     "/accounts/:path*",
     "/challenges/:path*",
     "/payouts/:path*",
