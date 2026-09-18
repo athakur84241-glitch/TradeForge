@@ -67,11 +67,105 @@ export async function getAdminPayouts(input: ListInput = {}) {
 }
 
 export async function getAdminUsers(input: ListInput = {}) {
-  const { admin } = await requireAdmin(); const { page } = range(input); const result = await admin.auth.admin.listUsers({ page, perPage: pageSize });
-  if (result.error) throw new Error("Unable to load users."); const ids = result.data.users.map((user) => user.id); const profiles = ids.length ? await admin.from("profiles").select("id, display_name, first_name, last_name, role, created_at").in("id", ids) : { data: [], error: null };
-  if (profiles.error) throw new Error("Unable to load user profiles."); const map = new Map((profiles.data ?? []).map((profile) => [profile.id, profile])); const search = input.search?.toLowerCase();
-  const rows = result.data.users.filter((user) => !search || user.id.toLowerCase().includes(search) || user.email?.toLowerCase().includes(search) || map.get(user.id)?.display_name?.toLowerCase().includes(search)).map((user) => ({ id: user.id, email: user.email ?? "Unavailable", created_at: user.created_at, last_sign_in_at: user.last_sign_in_at, profile: map.get(user.id) ?? null }));
-  return { rows, page, pageSize, total: result.data.total ?? rows.length };
+  const { admin } = await requireAdmin();
+
+  const { page } = range(input);
+  const search = input.search?.trim().toLowerCase();
+
+  let users: Awaited<
+    ReturnType<typeof admin.auth.admin.listUsers>
+  >["data"]["users"] = [];
+
+  let total = 0;
+
+  if (search) {
+    const perPage = 100;
+    let currentPage = 1;
+
+    while (true) {
+      const result = await admin.auth.admin.listUsers({
+        page: currentPage,
+        perPage,
+      });
+
+      if (result.error) {
+        throw new Error("Unable to load users.");
+      }
+
+      users = [...users, ...result.data.users];
+      total = result.data.total ?? users.length;
+
+      if (users.length >= total || result.data.users.length < perPage) {
+        break;
+      }
+
+      currentPage += 1;
+    }
+  } else {
+    const result = await admin.auth.admin.listUsers({
+      page,
+      perPage: pageSize,
+    });
+
+    if (result.error) {
+      throw new Error("Unable to load users.");
+    }
+
+    users = result.data.users;
+    total = result.data.total ?? users.length;
+  }
+
+  const ids = users.map((user) => user.id);
+
+  const profiles = ids.length
+    ? await admin
+        .from("profiles")
+        .select(
+          "id, display_name, first_name, last_name, role, created_at"
+        )
+        .in("id", ids)
+    : { data: [], error: null };
+
+  if (profiles.error) {
+    throw new Error("Unable to load user profiles.");
+  }
+
+  const profileMap = new Map(
+    (profiles.data ?? []).map((profile) => [profile.id, profile])
+  );
+
+  const filteredUsers = search
+    ? users.filter((user) => {
+        const profile = profileMap.get(user.id);
+
+        return (
+          user.id.toLowerCase().includes(search) ||
+          user.email?.toLowerCase().includes(search) ||
+          profile?.display_name?.toLowerCase().includes(search) ||
+          profile?.first_name?.toLowerCase().includes(search) ||
+          profile?.last_name?.toLowerCase().includes(search)
+        );
+      })
+    : users;
+
+  const rows = filteredUsers.map((user) => ({
+    id: user.id,
+    email: user.email ?? "Unavailable",
+    created_at: user.created_at,
+    last_sign_in_at: user.last_sign_in_at,
+    profile: profileMap.get(user.id) ?? null,
+  }));
+
+  const paginatedRows = search
+    ? rows.slice((page - 1) * pageSize, page * pageSize)
+    : rows;
+
+  return {
+    rows: paginatedRows,
+    page,
+    pageSize,
+    total: search ? rows.length : total,
+  };
 }
 
 export async function getAdminAuditLogs(input: ListInput = {}) {
@@ -79,7 +173,76 @@ export async function getAdminAuditLogs(input: ListInput = {}) {
   if (error) throw new Error("Unable to load audit logs."); return { rows: data ?? [], page, pageSize, total: count ?? 0 };
 }
 
-export async function getAdminOrder(id: string) { assertUuid(id); const { admin } = await requireAdmin(); const { data, error } = await admin.from("orders").select("*").eq("id", id).maybeSingle(); if (error) throw new Error("Unable to load order."); return data; }
+export async function getAdminOrder(id: string) {
+  assertUuid(id);
+
+  const { admin } = await requireAdmin();
+
+  const { data: order, error: orderError } = await admin
+    .from("orders")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (orderError) {
+    throw new Error("Unable to load order.");
+  }
+
+  if (!order) {
+    return null;
+  }
+
+  const [purchaseResult, planResult] = await Promise.all([
+    admin
+      .from("purchases")
+      .select(
+        "id, user_id, order_id, challenge_plan_id, account_size, amount_cents, currency, status, purchased_at, created_at, updated_at"
+      )
+      .eq("order_id", order.id)
+      .maybeSingle(),
+
+    admin
+      .from("challenge_plans")
+      .select(
+        "id, name, account_size, price_cents, currency, is_active"
+      )
+      .eq("id", order.challenge_plan_id)
+      .maybeSingle(),
+  ]);
+
+  if (purchaseResult.error) {
+    throw new Error("Unable to load purchase.");
+  }
+
+  if (planResult.error) {
+    throw new Error("Unable to load challenge plan.");
+  }
+
+  let account = null;
+
+  if (purchaseResult.data?.id) {
+    const accountResult = await admin
+      .from("accounts")
+      .select(
+        "id, user_id, purchase_id, challenge_plan_id, account_name, account_size, status, phase, starting_balance, balance, equity, pnl, pnl_percent, platform, provider_account_id, last_activity, created_at, updated_at"
+      )
+      .eq("purchase_id", purchaseResult.data.id)
+      .maybeSingle();
+
+    if (accountResult.error) {
+      throw new Error("Unable to load provisioned account.");
+    }
+
+    account = accountResult.data;
+  }
+
+  return {
+    ...order,
+    purchase: purchaseResult.data ?? null,
+    plan: planResult.data ?? null,
+    account,
+  };
+}
 
 export async function reconcileAdminPayment(orderId: string) {
   assertUuid(orderId); const { admin, user } = await requireAdmin(); const result = await reconcileWalletPayment(orderId);

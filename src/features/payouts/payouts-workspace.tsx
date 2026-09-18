@@ -17,8 +17,8 @@ import { MetricCard } from "@/components/workspace/metric-card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
-import { supabase } from "@/lib/supabase";
 import { requestPayout } from "@/features/payouts/payout-service";
+import { supabase } from "@/lib/supabase";
 
 import type { Payout } from "@/features/workspace/types";
 
@@ -224,7 +224,7 @@ if (mounted) {
   setEligibilityLoading(false);
 }
 
-     const payoutQuery = supabase
+    const payoutQuery = supabase
   .from("payout_requests")
   .select(
     "id, user_id, account_id, requested_amount, method, status, requested_at, processed_at, note"
@@ -237,18 +237,29 @@ const { data, error } = await payoutQuery;
 
       if (error) throw error;
 
-      const mapped: Payout[] = (data ?? []).map((row) => ({
-        id: row.id,
-        reference: `#${row.id.slice(0, 8).toUpperCase()}`,
-        requestedAt: new Date(row.requested_at).toLocaleDateString("en-GB"),
-        processedAt: row.processed_at
-          ? new Date(row.processed_at).toLocaleDateString("en-GB")
-          : "—",
-        method: row.method,
-        amount: Number(row.requested_amount),
-        status: row.status === "paid" ? "Completed" : row.status === "rejected" ? "Rejected" : "Pending",
-        note: row.note ?? "—",
-      }));
+      const mapped: Payout[] = (data ?? []).map((row) => {
+  const dbStatus = String(row.status).toLowerCase();
+
+  const status: Payout["status"] =
+    dbStatus === "paid"
+      ? "Completed"
+      : dbStatus === "rejected" || dbStatus === "cancelled"
+        ? "Rejected"
+        : "Pending";
+
+  return {
+    id: row.id,
+    reference: `#${row.id.slice(0, 8).toUpperCase()}`,
+    requestedAt: new Date(row.requested_at).toLocaleDateString("en-GB"),
+    processedAt: row.processed_at
+      ? new Date(row.processed_at).toLocaleDateString("en-GB")
+      : "—",
+    method: row.method,
+    amount: Number(row.requested_amount),
+    status,
+    note: row.note ?? "—",
+  };
+});
 
       if (mounted) setPayouts(mapped);
     } catch (error: unknown) {

@@ -25,6 +25,7 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHODS[0]);
   const [payment, setPayment] = useState<PaymentRequest | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentUnavailable, setPaymentUnavailable] = useState(false);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -118,17 +119,30 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
   }
 
   async function handleCreatePayment() {
-    if (!order || isCreatingPayment) return;
-    setIsCreatingPayment(true);
-    setPaymentError(null);
-    try {
-      setPayment(await createCryptoPaymentRequest(order.id, paymentMethod));
-    } catch (error) {
-      setPaymentError(error instanceof Error ? error.message : "Unable to create payment instructions.");
-    } finally {
-      setIsCreatingPayment(false);
+  if (!order || isCreatingPayment || paymentUnavailable) return;
+
+  setIsCreatingPayment(true);
+  setPaymentError(null);
+  setPaymentUnavailable(false);
+
+  try {
+    const paymentRequest = await createCryptoPaymentRequest(order.id, paymentMethod);
+    setPayment(paymentRequest);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to create payment instructions.";
+
+    setPaymentError(message);
+
+    if (message.toLowerCase().includes("not configured")) {
+      setPaymentUnavailable(true);
     }
+  } finally {
+    setIsCreatingPayment(false);
   }
+}
 
   async function handleRefreshStatus() {
     if (!order || isRefreshing) return;
@@ -334,11 +348,30 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
                 {isCreatingOrder ? "Creating order..." : order ? "Order created" : "Create pending order"}
               </Button>
 
-              {order && !payment && (
-                <Button type="button" variant="outline" className="mt-3 w-full" disabled={isCreatingPayment} onClick={handleCreatePayment}>
-                  {isCreatingPayment ? "Preparing payment..." : "Show payment instructions"}
-                </Button>
-              )}
+             {order && !payment && !paymentUnavailable && (
+  <Button
+    type="button"
+    variant="outline"
+    className="mt-3 w-full"
+    disabled={isCreatingPayment}
+    onClick={handleCreatePayment}
+  >
+    {isCreatingPayment ? "Preparing payment..." : "Show payment instructions"}
+  </Button>
+)}
+
+{order && !payment && paymentUnavailable && (
+  <div className="mt-3 rounded-tf-md border border-warning/30 bg-warning/10 p-4">
+    <p className="text-sm font-semibold text-warning">
+      Crypto payment is temporarily unavailable.
+    </p>
+
+    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+      Payment configuration is not available yet. Your order remains unpaid
+      and no purchase or account has been activated.
+    </p>
+  </div>
+)}
 
               {payment && (
                 <div className="mt-5 rounded-tf-md border border-primary/40 bg-primary/5 p-4">
@@ -397,27 +430,30 @@ export function CheckoutPage({ model }: { model: ChallengePlan }) {
               )}
 
               {order ? (
-                <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
-                  Order status: <span className="font-semibold text-foreground">{order.status.replace("_", " ")}</span> · {order.id}
-                </p>
-              ) : orderError ? (
-                <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
-                  {orderError}
-                </p>
-              ) : paymentError ? (
-                <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
-                  {paymentError}
-                </p>
-              ) : (
-                <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
-                  Payment verification is server-side. Your purchase activates only after a confirmed payment.
-                </p>
-              )}
-              {paymentError?.includes("not configured") && (
-                <p className="mt-3 rounded-tf-md border border-warning/30 bg-warning/10 p-3 text-center text-xs leading-5 text-warning">
-                  Crypto payment is temporarily unavailable. Your order remains unpaid and no purchase has been activated.
-                </p>
-              )}
+  <>
+    <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
+      Order status:{" "}
+      <span className="font-semibold text-foreground">
+        {order.status.replace("_", " ")}
+      </span>{" "}
+      · {order.id}
+    </p>
+
+    {paymentError && !paymentUnavailable && (
+      <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
+        {paymentError}
+      </p>
+    )}
+  </>
+) : orderError ? (
+  <p role="alert" className="mt-3 text-center text-xs leading-5 text-danger">
+    {orderError}
+  </p>
+) : (
+  <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
+    Payment verification is server-side. Your purchase activates only after a confirmed payment.
+  </p>
+)}
             </div>
           </aside>
         </div>

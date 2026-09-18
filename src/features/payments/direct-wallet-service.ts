@@ -109,9 +109,6 @@ export async function markOrderConfirmed(orderId: string, verification: {
     verified_amount_atomic: verification.amountAtomic,
     verified_transaction_hash: verification.transactionHash,
     verified_payment_reference: verification.paymentReference,
-    verified_confirmation_count: verification.confirmationCount,
-    verified_provider: verification.provider,
-    verified_metadata: verification.metadata,
   });
 
   if (error) throw new Error(error.message || "Payment verification failed.");
