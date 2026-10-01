@@ -484,7 +484,8 @@ const tradingDaysValue = null;
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">TRADING WORKSPACE</p>
             <h2 className="mt-4 text-3xl font-display font-semibold tracking-tight text-foreground">No account yet.</h2>
             <p className="mx-auto mt-4 max-w-[28rem] text-sm leading-6 text-muted-foreground">
-              Your workspace will appear here once an account is provisioned.
+              Choose a challenge to provision your first
+              trading account.
             </p>
             <Button asChild className="mt-6">
               <Link href="/challenges">Explore Challenges</Link>

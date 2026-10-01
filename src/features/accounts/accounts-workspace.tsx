@@ -232,7 +232,8 @@ export function AccountsWorkspace() {
           <div className="max-w-xl px-6 text-center">
             <h2 className="text-3xl font-display font-semibold tracking-tight text-foreground">No accounts yet.</h2>
             <p className="mx-auto mt-4 max-w-[28rem] text-sm leading-6 text-muted-foreground">
-              Your accounts will appear here once an account is provisioned.
+              Choose a challenge to get your account provisioned
+              and access your workspace.
             </p>
             <Button asChild className="mt-6">
               <Link href="/challenges">Explore Challenges</Link>
