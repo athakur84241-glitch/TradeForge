@@ -83,6 +83,7 @@ export function AccountsWorkspace() {
     let mounted = true;
     async function load() {
       setLoading(true);
+      setFetchedAccounts([]);
       setFetchError(null);
       try {
         const userRes = await supabase.auth.getUser();
@@ -186,13 +187,13 @@ export function AccountsWorkspace() {
   const passedCount = fetchedAccounts.filter((a) => a.status === 'Passed').length;
   const hasAccounts = fetchedAccounts.length > 0;
 
-  if (!loading && !hasAccounts) {
+  if (loading) {
     return (
       <div className="grid gap-6">
         <PageHeader
-          eyebrow="Accounts"
+          eyebrow="ACCOUNTS"
           title="Your trading accounts"
-          description="Your TradeForge trading workspace will appear here after you purchase an evaluation."
+          description="Your account workspace will appear here once provisioned."
           action={
             <Button asChild>
               <Link href="/challenges">Explore Challenges</Link>
@@ -202,9 +203,36 @@ export function AccountsWorkspace() {
 
         <section className="flex min-h-[420px] items-center justify-center rounded-tf-lg border border-border bg-card">
           <div className="max-w-xl px-6 text-center">
-            <h2 className="text-3xl font-display font-semibold tracking-tight text-foreground">No trading accounts yet</h2>
-            <p className="mt-4 text-base leading-7 text-muted-foreground">
-              Your TradeForge trading workspace will appear here after you purchase an evaluation. Once your purchase is completed and your account is provisioned, you’ll be able to track your account status, balance, equity, P&amp;L, challenge progress, trading days, and other account details from this workspace.
+            <div className="mx-auto h-3 w-24 animate-pulse rounded-full bg-muted/50" />
+            <div className="mx-auto mt-5 h-10 w-60 animate-pulse rounded-md bg-muted/40" />
+            <div className="mx-auto mt-4 h-4 max-w-[28rem] w-full animate-pulse rounded-md bg-muted/25" />
+            <div className="mx-auto mt-2 h-4 max-w-[22rem] w-3/4 animate-pulse rounded-md bg-muted/25" />
+            <div className="mx-auto mt-7 h-11 w-40 animate-pulse rounded-md bg-primary/20" />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (!hasAccounts) {
+    return (
+      <div className="grid gap-6">
+        <PageHeader
+          eyebrow="ACCOUNTS"
+          title="Your trading accounts"
+          description="Your account workspace will appear here once provisioned."
+          action={
+            <Button asChild>
+              <Link href="/challenges">Explore Challenges</Link>
+            </Button>
+          }
+        />
+
+        <section className="flex min-h-[420px] items-center justify-center rounded-tf-lg border border-border bg-card">
+          <div className="max-w-xl px-6 text-center">
+            <h2 className="text-3xl font-display font-semibold tracking-tight text-foreground">No accounts yet.</h2>
+            <p className="mx-auto mt-4 max-w-[28rem] text-sm leading-6 text-muted-foreground">
+              Your accounts will appear here once an account is provisioned.
             </p>
             <Button asChild className="mt-6">
               <Link href="/challenges">Explore Challenges</Link>

@@ -130,6 +130,8 @@ export function DashboardPage() {
 
     async function loadAccounts() {
       setIsLoadingAccounts(true);
+      setAccounts([]);
+      setSelectedAccountId(null);
 
       try {
         const userRes = await supabase.auth.getUser();
@@ -432,17 +434,17 @@ const tradingDaysValue = null;
     trend: "flat" as const,
   },
 ];
-  if (!isLoadingAccounts && !hasAccounts) {
+  if (isLoadingAccounts) {
     return (
       <div className="grid gap-6">
         <PageHeader
-          eyebrow={headerDate}
+          eyebrow="TRADING WORKSPACE"
           title={`Welcome back, ${displayName}.`}
-          description="Purchase an evaluation to unlock your TradeForge trading workspace."
+          description="Choose your first challenge to unlock the workspace."
           action={
             <Button asChild>
               <Link href="/challenges">
-                Start Purchasing <ArrowRight className="size-4" />
+                Explore Challenges <ArrowRight className="size-4" />
               </Link>
             </Button>
           }
@@ -450,14 +452,42 @@ const tradingDaysValue = null;
 
         <section className="flex min-h-[420px] items-center justify-center rounded-tf-lg border border-border bg-card">
           <div className="max-w-xl px-6 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Trading workspace</p>
-            <h2 className="mt-4 text-3xl font-display font-semibold tracking-tight text-foreground">Buy your first evaluation</h2>
-            <p className="mt-4 text-base leading-7 text-muted-foreground">
-              Purchase an evaluation to unlock your TradeForge trading workspace. Once your account is provisioned,
-              your account status, balance, equity, P&amp;L, challenge progress, trading activity, and other account details will appear here.
+            <div className="mx-auto h-3 w-28 animate-pulse rounded-full bg-muted/50" />
+            <div className="mx-auto mt-5 h-10 w-64 animate-pulse rounded-md bg-muted/40" />
+            <div className="mx-auto mt-4 h-4 max-w-[28rem] w-full animate-pulse rounded-md bg-muted/25" />
+            <div className="mx-auto mt-2 h-4 max-w-[22rem] w-3/4 animate-pulse rounded-md bg-muted/25" />
+            <div className="mx-auto mt-7 h-11 w-40 animate-pulse rounded-md bg-primary/20" />
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if (!hasAccounts) {
+    return (
+      <div className="grid gap-6">
+        <PageHeader
+          eyebrow="TRADING WORKSPACE"
+          title={`Welcome back, ${displayName}.`}
+          description="Choose your first challenge to unlock the workspace."
+          action={
+            <Button asChild>
+              <Link href="/challenges">
+                Explore Challenges <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          }
+        />
+
+        <section className="flex min-h-[420px] items-center justify-center rounded-tf-lg border border-border bg-card">
+          <div className="max-w-xl px-6 text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">TRADING WORKSPACE</p>
+            <h2 className="mt-4 text-3xl font-display font-semibold tracking-tight text-foreground">No account yet.</h2>
+            <p className="mx-auto mt-4 max-w-[28rem] text-sm leading-6 text-muted-foreground">
+              Your workspace will appear here once an account is provisioned.
             </p>
             <Button asChild className="mt-6">
-              <Link href="/challenges">Start Purchasing</Link>
+              <Link href="/challenges">Explore Challenges</Link>
             </Button>
           </div>
         </section>
