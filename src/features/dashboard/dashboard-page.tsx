@@ -294,6 +294,7 @@ if (challengePlanIds.length > 0) {
   }, []);
 
   const selectedAccount = accounts.find((account) => String(account.id) === String(selectedAccountId)) ?? accounts[0] ?? null;
+  const hasAccounts = accounts.length > 0;
 
  const accountSize = selectedAccount?.size ?? 0;
 const headerDate = getDashboardHeaderDate();
@@ -431,6 +432,39 @@ const tradingDaysValue = null;
     trend: "flat" as const,
   },
 ];
+  if (!isLoadingAccounts && !hasAccounts) {
+    return (
+      <div className="grid gap-6">
+        <PageHeader
+          eyebrow={headerDate}
+          title={`Welcome back, ${displayName}.`}
+          description="Purchase an evaluation to unlock your TradeForge trading workspace."
+          action={
+            <Button asChild>
+              <Link href="/challenges">
+                Start Purchasing <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          }
+        />
+
+        <section className="flex min-h-[420px] items-center justify-center rounded-tf-lg border border-border bg-card">
+          <div className="max-w-xl px-6 text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Trading workspace</p>
+            <h2 className="mt-4 text-3xl font-display font-semibold tracking-tight text-foreground">Buy your first evaluation</h2>
+            <p className="mt-4 text-base leading-7 text-muted-foreground">
+              Purchase an evaluation to unlock your TradeForge trading workspace. Once your account is provisioned,
+              your account status, balance, equity, P&amp;L, challenge progress, trading activity, and other account details will appear here.
+            </p>
+            <Button asChild className="mt-6">
+              <Link href="/challenges">Start Purchasing</Link>
+            </Button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6">
       <PageHeader

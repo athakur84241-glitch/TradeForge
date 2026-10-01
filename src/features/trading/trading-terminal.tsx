@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CandlestickSeries, ColorType, createChart, type IChartApi, type IPriceLine, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 import { CircleDot, RefreshCw, ShieldAlert, TrendingDown, TrendingUp } from "lucide-react";
@@ -265,6 +266,23 @@ export function TradingTerminal({ accountId: initialAccountId = null }: { accoun
 
   const openPositions = positions.filter((position) => position.status === "open");
   const totalPnl = openPositions.reduce((sum, position) => sum + position.unrealizedPnl, 0);
+
+  if (accounts.length === 0) {
+    return (
+      <div className="rounded-tf-lg border border-border bg-card p-8">
+        <div className="mx-auto max-w-xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Trading workspace</p>
+          <h2 className="mt-4 text-3xl font-display font-semibold tracking-tight text-foreground">Purchase an evaluation to unlock your trading workspace</h2>
+          <p className="mt-4 text-base leading-7 text-muted-foreground">
+            You need a TradeForge evaluation account before paper positions and trading data can be used in this workspace.
+          </p>
+          <Button asChild className="mt-6">
+            <Link href="/challenges">Explore Challenges</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-9rem)] overflow-hidden rounded-tf-lg border border-border bg-card">

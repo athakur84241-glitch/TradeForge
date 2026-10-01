@@ -184,6 +184,36 @@ export function AccountsWorkspace() {
   const fundedCount = fetchedAccounts.filter((a) => a.status === 'Funded' || a.category === 'Funded').length;
   const availableReward = fetchedAccounts.filter((a) => a.status === 'Funded').reduce((sum, a) => sum + Number(a.pnl || 0), 0);
   const passedCount = fetchedAccounts.filter((a) => a.status === 'Passed').length;
+  const hasAccounts = fetchedAccounts.length > 0;
+
+  if (!loading && !hasAccounts) {
+    return (
+      <div className="grid gap-6">
+        <PageHeader
+          eyebrow="Accounts"
+          title="Your trading accounts"
+          description="Your TradeForge trading workspace will appear here after you purchase an evaluation."
+          action={
+            <Button asChild>
+              <Link href="/challenges">Explore Challenges</Link>
+            </Button>
+          }
+        />
+
+        <section className="flex min-h-[420px] items-center justify-center rounded-tf-lg border border-border bg-card">
+          <div className="max-w-xl px-6 text-center">
+            <h2 className="text-3xl font-display font-semibold tracking-tight text-foreground">No trading accounts yet</h2>
+            <p className="mt-4 text-base leading-7 text-muted-foreground">
+              Your TradeForge trading workspace will appear here after you purchase an evaluation. Once your purchase is completed and your account is provisioned, you’ll be able to track your account status, balance, equity, P&amp;L, challenge progress, trading days, and other account details from this workspace.
+            </p>
+            <Button asChild className="mt-6">
+              <Link href="/challenges">Explore Challenges</Link>
+            </Button>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">

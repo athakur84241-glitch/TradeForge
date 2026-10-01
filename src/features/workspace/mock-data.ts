@@ -284,20 +284,54 @@ export const payouts: Payout[] = [
   },
 ];
 
-export const leaderboardTraders: LeaderboardTrader[] = [
-  { id: "trader-1", rank: 1, alias: "OrbitAlpha", country: "GB", accountSize: 200000, weeklyReturn: 6.84, monthlyReturn: 14.26, winRate: 72, profitFactor: 2.31, badge: "Consistent" },
-  { id: "trader-2", rank: 2, alias: "NorthstarFX", country: "CA", accountSize: 100000, weeklyReturn: 6.12, monthlyReturn: 13.88, winRate: 69, profitFactor: 2.18, badge: "Risk control" },
-  { id: "trader-3", rank: 3, alias: "DeltaForge", country: "AE", accountSize: 200000, weeklyReturn: 5.74, monthlyReturn: 13.41, winRate: 67, profitFactor: 2.04, badge: "Momentum" },
-  { id: "trader-4", rank: 4, alias: "LondonOpen", country: "GB", accountSize: 100000, weeklyReturn: 5.19, monthlyReturn: 12.92, winRate: 65, profitFactor: 1.96, badge: "Consistent" },
-  { id: "trader-5", rank: 5, alias: "AtlasEdge", country: "US", accountSize: 50000, weeklyReturn: 4.88, monthlyReturn: 11.76, winRate: 64, profitFactor: 1.89, badge: "Breakout" },
-  { id: "trader-6", rank: 6, alias: "CalmExecution", country: "IN", accountSize: 100000, weeklyReturn: 4.62, monthlyReturn: 11.21, winRate: 68, profitFactor: 1.91, badge: "Risk control" },
-  { id: "trader-7", rank: 7, alias: "TokyoRange", country: "JP", accountSize: 50000, weeklyReturn: 4.21, monthlyReturn: 10.64, winRate: 61, profitFactor: 1.78, badge: "Consistent" },
-  { id: "trader-8", rank: 8, alias: "MacroPulse", country: "DE", accountSize: 200000, weeklyReturn: 3.97, monthlyReturn: 10.18, winRate: 59, profitFactor: 1.72, badge: "Momentum" },
-  { id: "trader-9", rank: 9, alias: "SessionMap", country: "SG", accountSize: 100000, weeklyReturn: 3.75, monthlyReturn: 9.87, winRate: 62, profitFactor: 1.69, badge: "Risk control" },
-  { id: "trader-10", rank: 10, alias: "CedarTrades", country: "NZ", accountSize: 50000, weeklyReturn: 3.41, monthlyReturn: 9.22, winRate: 58, profitFactor: 1.62, badge: "Breakout" },
-  { id: "trader-11", rank: 11, alias: "MeasuredMove", country: "AU", accountSize: 25000, weeklyReturn: 3.18, monthlyReturn: 8.74, winRate: 57, profitFactor: 1.58, badge: "Consistent" },
-  { id: "trader-12", rank: 12, alias: "RiskFirst", country: "NL", accountSize: 100000, weeklyReturn: 2.96, monthlyReturn: 8.31, winRate: 60, profitFactor: 1.61, badge: "Risk control" },
+const leaderboardAliases = [
+  "OrbitAlpha", "NorthstarFX", "DeltaForge", "LondonOpen", "AtlasEdge", "CalmExecution", "TokyoRange", "MacroPulse", "SessionMap", "CedarTrades",
+  "MeasuredMove", "RiskFirst", "HarborVolt", "SignalBloom", "DriftMetric", "CobaltRun", "ApexThread", "SummitPace", "VantageLynx", "EchoBreak",
+  "FjordStack", "VerveCrest", "MercuryGrid", "NovaDrift", "ScoutYield", "CoastPulse", "CityVector", "SilverRange", "LogixFlow", "StoneBreeze",
+  "VertexMotive", "BorealShift", "LagoonSync", "PineDelta", "TrueHarbor", "EquinoxTrade", "WaypointGrid", "QuarryNexus", "BriskFrame", "AmberFlare",
+  "FastLaneFX", "CurrentTilt", "MapleCurve", "BluePeak", "IronHorizon", "AmberSignal", "KeystoneRun", "NexusPivot", "TradeBeam", "KiteArc",
+  "AsterFrame", "GlacierMethod", "RiverPoint", "BrightField", "RidgeSignal", "SailForge", "NorthPrint", "GaleRoute", "PilotCrest", "TrendLedger",
+  "HarborLogic", "FoxMarket", "TideConstruct", "HexaRange", "CinderGrid", "FolkloreFX", "SunlineMove", "BasiliskFX", "QuartzPoint", "PrismTrail",
+  "LatticeForm", "GlintVolume", "RefinedEdge", "HaloDrive", "AxiomTide", "SunsetTrend", "HorizonKey", "ContourBlend", "AscentLoop", "MercantFX",
+  "NorthlineIQ", "PolarPrint", "StoneLoop", "NobleShift", "PitchRange", "RallyFrame", "GoldenPath", "DriftMode", "VectorMoss", "ValleyTape",
+  "CobaltEdge", "StoneParse", "EvergreenFX", "PrimeTable", "VectorTone", "MidnightRange", "CapeSignal", "SageExecute", "LynxPanel", "CrestFlow"
 ];
+
+const leaderboardCountries = ["GB", "US", "CA", "AE", "DE", "JP", "IN", "AU", "NL", "SG", "NZ", "FR", "SE", "CH", "IT", "BR", "ZA", "HK", "KR", "TW"];
+const leaderboardBadges: LeaderboardTrader["badge"][] = [
+  "Consistent",
+  "Risk control",
+  "Momentum",
+  "Breakout",
+  "Consistent",
+  "Risk control",
+];
+const leaderboardSizes = [25000, 50000, 100000, 200000];
+
+export const leaderboardTraders: LeaderboardTrader[] = Array.from({ length: 100 }, (_, index) => {
+  const rank = index + 1;
+  const alias = leaderboardAliases[index % leaderboardAliases.length];
+  const country = leaderboardCountries[index % leaderboardCountries.length];
+  const accountSize = leaderboardSizes[index % leaderboardSizes.length];
+  const weeklyReturn = Number((Math.max(0.9, 7.1 - index * 0.05 + ((index % 5) * 0.3))).toFixed(2));
+  const monthlyReturn = Number((Math.max(2.2, 18.1 - index * 0.12 + ((index % 6) * 0.42))).toFixed(2));
+  const winRate = 52 + ((index * 7) % 22);
+  const profitFactor = Number((1.28 + ((index * 7) % 14) / 10 + (index % 4) * 0.08).toFixed(2));
+  const badge = leaderboardBadges[index % leaderboardBadges.length];
+
+  return {
+    id: `trader-${rank}`,
+    rank,
+    alias: alias,
+    country,
+    accountSize,
+    weeklyReturn,
+    monthlyReturn,
+    winRate,
+    profitFactor,
+    badge,
+  };
+});
 
 export const notifications: WorkspaceNotification[] = [
   { id: "notice-1", title: "Daily loss usage is back below 25%", description: "Apex Evaluation 100K has $3,821.40 of today’s daily loss limit available.", timestamp: "16 minutes ago", category: "Rule alert", unread: true, href: "/" },

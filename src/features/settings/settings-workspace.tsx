@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   Bell,
   Check,
@@ -26,8 +26,8 @@ import { DemoAction } from "@/components/workspace/demo-action";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
+import { getProfile, updatePreferences, updateProfile } from "@/features/profile/profile-service";
 import { loginActivity } from "@/features/workspace/mock-data";
-import { updatePreferences } from "@/features/profile/profile-service";
 
 type PreferenceKey =
   | "challengeUpdates"
@@ -40,11 +40,23 @@ type PreferenceKey =
   | "sessionReminders"
   | "privacyAnalytics";
 
-function SelectControl({ label, defaultValue, children }: { label: string; defaultValue: string; children: React.ReactNode }) {
+const defaultPreferences: Record<PreferenceKey, boolean> = {
+  challengeUpdates: true,
+  ruleAlerts: true,
+  payoutUpdates: true,
+  productEmail: false,
+  weeklyReport: true,
+  securityEmail: true,
+  performanceAnalytics: true,
+  sessionReminders: false,
+  privacyAnalytics: false,
+};
+
+function SelectControl({ label, value, onChange, children }: { label: string; value: string; onChange: (next: string) => void; children: React.ReactNode }) {
   return (
     <label className="grid gap-2 text-sm font-medium">
       {label}
-      <select defaultValue={defaultValue} className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 rounded-tf-md border border-border bg-surface px-3 text-sm text-foreground">
         {children}
       </select>
     </label>
@@ -54,17 +66,19 @@ function SelectControl({ label, defaultValue, children }: { label: string; defau
 export function SettingsWorkspace() {
   const [saved, setSaved] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
-  const [preferences, setPreferences] = useState<Record<PreferenceKey, boolean>>({
-    challengeUpdates: true,
-    ruleAlerts: true,
-    payoutUpdates: true,
-    productEmail: false,
-    weeklyReport: true,
-    securityEmail: true,
-    performanceAnalytics: true,
-    sessionReminders: false,
-    privacyAnalytics: false,
-  });
+  const [language, setLanguage] = useState("English (UK)");
+  const [timezone, setTimezone] = useState("UTC");
+  const [currency, setCurrency] = useState("USD");
+  const [dateFormat, setDateFormat] = useState("DD MMM YYYY");
+  const [preferences, setPreferences] = useState<Record<PreferenceKey, boolean>>(defaultPreferences);
+
+  useEffect(() => {
+    void getProfile().then((profile) => {
+      setLanguage(profile.language ?? "English (UK)");
+      setTimezone(profile.timezone ?? "UTC");
+      setPreferences({ ...defaultPreferences, ...(profile.preferences as Partial<Record<PreferenceKey, boolean>> | undefined) });
+    }).catch(() => undefined);
+  }, []);
 
   function updatePreference(key: PreferenceKey, value: boolean) {
     setPreferences((current) => ({ ...current, [key]: value }));
@@ -77,6 +91,15 @@ export function SettingsWorkspace() {
   }
 
   async function saveAllPreferences() {
+    const profile = await getProfile();
+    await updateProfile({
+      firstName: profile.first_name ?? "",
+      lastName: profile.last_name ?? "",
+      phone: profile.phone ?? "",
+      country: profile.country ?? "",
+      timezone,
+      language,
+    });
     await updatePreferences(preferences);
     setSaved(true);
   }
@@ -90,7 +113,7 @@ export function SettingsWorkspace() {
         action={
           <Button type="button" onClick={() => void saveAllPreferences()}>
             {saved ? <Check className="size-4" /> : <Save className="size-4" />}
-            {saved ? "Saved locally" : "Save preferences"}
+            {saved ? "Saved profile" : "Save preferences"}
           </Button>
         }
       />
@@ -98,16 +121,16 @@ export function SettingsWorkspace() {
       <div className="grid gap-6 xl:grid-cols-2">
         <SectionCard title="General preferences" description="Regional and display defaults." action={<Globe2 className="size-5 text-primary" />}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <SelectControl label="Language" defaultValue="English (UK)">
+            <SelectControl label="Language" value={language} onChange={setLanguage}>
               <option>English (UK)</option><option>English (US)</option><option>Hindi</option>
             </SelectControl>
-            <SelectControl label="Currency display" defaultValue="USD">
+            <SelectControl label="Currency display" value={currency} onChange={setCurrency}>
               <option>USD</option><option>GBP</option><option>EUR</option><option>INR</option>
             </SelectControl>
-            <SelectControl label="Timezone" defaultValue="Europe/London (UTC+1)">
-              <option>Europe/London (UTC+1)</option><option>Asia/Kolkata (UTC+5:30)</option><option>America/New_York (UTC-4)</option>
+            <SelectControl label="Timezone" value={timezone} onChange={setTimezone}>
+              <option value="UTC">UTC</option><option value="Europe/London (UTC+1)">Europe/London (UTC+1)</option><option value="Asia/Kolkata (UTC+5:30)">Asia/Kolkata (UTC+5:30)</option><option value="America/New_York (UTC-4)">America/New_York (UTC-4)</option>
             </SelectControl>
-            <SelectControl label="Date format" defaultValue="DD MMM YYYY">
+            <SelectControl label="Date format" value={dateFormat} onChange={setDateFormat}>
               <option>DD MMM YYYY</option><option>MMM DD, YYYY</option><option>YYYY-MM-DD</option>
             </SelectControl>
           </div>
@@ -115,10 +138,10 @@ export function SettingsWorkspace() {
 
         <SectionCard title="Appearance" description="A focused dark interface is the current TradeForge default." action={<Palette className="size-5 text-primary" />}>
           <div className="grid gap-4">
-            <SelectControl label="Theme" defaultValue="Dark">
+            <SelectControl label="Theme" value="Dark" onChange={() => undefined}>
               <option>Dark</option><option>System (dark preview)</option>
             </SelectControl>
-            <SelectControl label="Information density" defaultValue="Comfortable">
+            <SelectControl label="Information density" value="Comfortable" onChange={() => undefined}>
               <option>Comfortable</option><option>Compact</option>
             </SelectControl>
             <div className="rounded-tf-md border border-border bg-surface p-4">
@@ -142,7 +165,7 @@ export function SettingsWorkspace() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Email preferences" description="Messages sent to the demo profile." action={<Mail className="size-5 text-primary" />}>
+        <SectionCard title="Email preferences" description="Messages sent to your profile." action={<Mail className="size-5 text-primary" />}>
           <div className="grid gap-4">
             <Switch label="Product and workspace updates" checked={preferences.productEmail} onCheckedChange={(value) => updatePreference("productEmail", value)} />
             <Switch label="Weekly performance report" checked={preferences.weeklyReport} onCheckedChange={(value) => updatePreference("weeklyReport", value)} />
@@ -154,10 +177,10 @@ export function SettingsWorkspace() {
       <div className="grid gap-6 xl:grid-cols-2">
         <SectionCard title="Trading preferences" description="Used for local insights and reporting." action={<SlidersHorizontal className="size-5 text-primary" />}>
           <div className="grid gap-4">
-            <SelectControl label="Primary trading session" defaultValue="London open">
+            <SelectControl label="Primary trading session" value="London open" onChange={() => undefined}>
               <option>London open</option><option>New York open</option><option>Asia session</option>
             </SelectControl>
-            <SelectControl label="Default chart range" defaultValue="1 month">
+            <SelectControl label="Default chart range" value="1 month" onChange={() => undefined}>
               <option>7 days</option><option>1 month</option><option>3 months</option>
             </SelectControl>
             <Switch label="Performance analytics" checked={preferences.performanceAnalytics} onCheckedChange={(value) => updatePreference("performanceAnalytics", value)} />
@@ -167,10 +190,10 @@ export function SettingsWorkspace() {
 
         <SectionCard title="Risk preferences" description="Personal guardrails do not replace evaluation rules." action={<ShieldAlert className="size-5 text-warning" />}>
           <div className="grid gap-4">
-            <SelectControl label="Personal risk per trade" defaultValue="0.50%">
+            <SelectControl label="Personal risk per trade" value="0.50%" onChange={() => undefined}>
               <option>0.25%</option><option>0.50%</option><option>0.75%</option><option>1.00%</option>
             </SelectControl>
-            <SelectControl label="Daily personal stop" defaultValue="1.50%">
+            <SelectControl label="Daily personal stop" value="1.50%" onChange={() => undefined}>
               <option>1.00%</option><option>1.50%</option><option>2.00%</option>
             </SelectControl>
             <label className="grid gap-2 text-sm font-medium">
@@ -183,7 +206,7 @@ export function SettingsWorkspace() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-12">
-        <SectionCard title="Password controls" description="Local form validation only." className="xl:col-span-7" action={<KeyRound className="size-5 text-primary" />}>
+        <SectionCard title="Password controls" description="Use a secure password for your TradeForge account." className="xl:col-span-7" action={<KeyRound className="size-5 text-primary" />}>
           <form onSubmit={savePassword} className="grid gap-4">
             <label className="grid gap-2 text-sm font-medium">Current password<PasswordInput required /></label>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -191,17 +214,17 @@ export function SettingsWorkspace() {
               <label className="grid gap-2 text-sm font-medium">Confirm password<PasswordInput required minLength={8} /></label>
             </div>
             <div className="flex items-center justify-end gap-3">
-              {passwordSaved && <span className="inline-flex items-center gap-1.5 text-sm text-success"><Check className="size-4" /> Demo validated</span>}
+              {passwordSaved && <span className="inline-flex items-center gap-1.5 text-sm text-success"><Check className="size-4" /> Saved</span>}
               <Button type="submit">Validate password change</Button>
             </div>
           </form>
         </SectionCard>
 
-        <SectionCard title="Two-factor authentication" description="Production integration placeholder." className="xl:col-span-5" action={<LockKeyhole className="size-5 text-primary" />}>
+        <SectionCard title="Two-factor authentication" description="This feature is not active yet." className="xl:col-span-5" action={<LockKeyhole className="size-5 text-primary" />}>
           <div className="rounded-tf-md border border-warning/20 bg-warning/10 p-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold">Not enabled</p>
-              <StatusBadge tone="warning">Placeholder</StatusBadge>
+              <StatusBadge tone="warning">Pending</StatusBadge>
             </div>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">A secure backend and recovery-code flow are required before enabling 2FA.</p>
           </div>
@@ -209,7 +232,7 @@ export function SettingsWorkspace() {
         </SectionCard>
       </div>
 
-      <SectionCard title="Active sessions" description="Review and revoke demo device sessions." action={<MonitorCog className="size-5 text-primary" />}>
+      <SectionCard title="Active sessions" description="Review recent sign-ins on your account." action={<MonitorCog className="size-5 text-primary" />}>
         <div className="grid gap-3">
           {loginActivity.map((session, index) => {
             const Icon = index === 1 ? Smartphone : Laptop;
