@@ -503,7 +503,7 @@ type PlanItem = {
   secondaryRules: Array<{ label: string; value: string }>;
 };
 
-function ChallengeCard({ model, item }: { model: ChallengeModel; item: PlanItem }) {
+function ChallengeCard({ model, item, href }: { model: ChallengeModel; item: PlanItem; href: string }) {
   const [showDetails, setShowDetails] = useState(false);
 
   return (
@@ -521,46 +521,35 @@ function ChallengeCard({ model, item }: { model: ChallengeModel; item: PlanItem 
 
       <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-background/40 p-3.5 space-y-2.5 text-xs sm:text-sm">
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">
-            {model === "2-Step" ? "Phase Targets" : "Profit Target"}
-          </span>
-          <span className={cn("font-semibold", item.profitTarget === "None" ? "text-emerald-400" : "text-white")}>
-            {item.profitTarget}
-          </span>
+          <span className="text-muted-foreground">{model === "2-Step" ? "Phase Targets" : "Profit Target"}</span>
+          <span className={cn("font-semibold", item.profitTarget === "None" ? "text-emerald-400" : "text-white")}>{item.profitTarget}</span>
         </div>
-
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Profit Split</span>
           <span className="font-semibold text-emerald-400">{item.profitSplit}</span>
         </div>
-
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Daily Loss</span>
           <span className="font-semibold text-white">{item.dailyLoss}</span>
         </div>
-
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Overall Loss</span>
           <span className="font-semibold text-white">{item.overallLoss}</span>
         </div>
-
         {item.trailingDrawdown && (
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Trailing Drawdown</span>
             <span className="font-semibold text-white">{item.trailingDrawdown}</span>
           </div>
         )}
-
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Min Trading Days</span>
           <span className="font-semibold text-white">{item.minDays}</span>
         </div>
-
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Payout Frequency</span>
           <span className="font-semibold text-white">{item.payoutFreq}</span>
         </div>
-
         {item.payoutEligibility && (
           <div className="flex items-center justify-between pt-1 border-t border-white/10">
             <span className="text-muted-foreground text-[11px]">Payout Eligibility</span>
@@ -570,12 +559,9 @@ function ChallengeCard({ model, item }: { model: ChallengeModel; item: PlanItem 
       </div>
 
       <div className="mt-4 space-y-2">
-        <button
-          type="button"
-          className="inline-flex w-full items-center justify-center rounded-full border border-primary/30 bg-primary/15 px-3 py-2.5 text-xs font-semibold text-primary transition duration-300 hover:bg-primary/25 hover:border-primary/50 group-hover:-translate-y-0.5"
-        >
-          Buy Challenge
-        </button>
+        <Button asChild className="w-full rounded-full border border-primary/30 bg-primary/15 text-primary hover:bg-primary/25 hover:border-primary/50 group-hover:-translate-y-0.5">
+          <Link href={href}>Buy Challenge</Link>
+        </Button>
 
         <button
           type="button"
@@ -600,22 +586,46 @@ function ChallengeCard({ model, item }: { model: ChallengeModel; item: PlanItem 
     </article>
   );
 }
+
 export function HomePage({ challengeCatalogue }: { challengeCatalogue: ChallengePlan[] }) {
   const [activeTab, setActiveTab] = useState<ChallengeModel>("1-Step");
 
+  const activePlans = challengeCatalogue.filter((plan) => plan.name === activeTab);
+  const trustPills = [
+    { label: "Flexible evaluation rules", icon: ShieldCheck },
+    { label: "Risk-focused environment", icon: Gauge },
+    { label: "Transparent challenge terms", icon: Eye },
+    { label: "Fast account progression", icon: TrendingUp },
+  ];
+
+  const premiumValueCards = [
+    {
+      title: "Challenge",
+      body: "Choose the evaluation path and account size that fits your strategy with clear pricing and conditions visible before you begin.",
+      icon: ShieldCheck,
+    },
+    {
+      title: "Progress",
+      body: "Trade inside defined risk limits and demonstrate consistent execution through your account lifecycle.",
+      icon: TrendingUp,
+    },
+    {
+      title: "Scale",
+      body: "Advance through the TradeForge journey with a premium account experience built around purpose and control.",
+      icon: ArrowUpRight,
+    },
+  ];
+
   return (
     <div className="relative overflow-hidden bg-background text-foreground">
-      {/* Subtle premium ambient background glow animation */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[900px] bg-[radial-gradient(circle_at_20%_15%,hsl(var(--primary)/.22),transparent_50%),radial-gradient(circle_at_80%_20%,hsl(220_100%_76%/.16),transparent_45%),radial-gradient(circle_at_50%_60%,hsl(267_89%_72%/.10),transparent_55%)] blur-3xl opacity-85 animate-[ambientDrift_24s_ease-in-out_infinite_alternate]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.025)_48%,transparent_100%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:120px_120px]" />
-      
+
       <div className="relative mx-auto flex max-w-[1400px] flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-6 border-b border-white/10 pb-8 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-tf-lg bg-primary-solid text-sm font-bold text-primary-solid-foreground shadow-glow">
-              T
-            </span>
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-tf-lg bg-primary-solid text-sm font-bold text-primary-solid-foreground shadow-glow">T</span>
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.28em] text-primary">TradeForge</p>
               <p className="text-xs text-muted-foreground">Premium trading evaluation</p>
@@ -648,9 +658,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
             <div className="mt-5 space-y-6">
               <h1 className="max-w-3xl font-display text-4xl font-bold leading-[1.1] tracking-[-0.035em] text-white sm:text-5xl lg:text-[3.85rem] xl:text-[4.15rem] lg:leading-[1.12]">
                 <span className="block text-white sm:whitespace-nowrap lg:whitespace-normal">Trade with precision.</span>
-                <span className="block mt-1.5 sm:mt-2 bg-gradient-to-r from-white via-white/95 to-primary/85 bg-clip-text text-transparent sm:whitespace-nowrap lg:whitespace-normal">
-                  Qualify with confidence.
-                </span>
+                <span className="block mt-1.5 sm:mt-2 bg-gradient-to-r from-white via-white/95 to-primary/85 bg-clip-text text-transparent sm:whitespace-nowrap lg:whitespace-normal">Qualify with confidence.</span>
               </h1>
               <p className="max-w-[640px] text-lg leading-8 text-muted-foreground/95 sm:text-xl">
                 A premium challenge gateway designed for serious traders who want transparency, discipline, and a modern evaluation experience.
@@ -693,9 +701,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
                     <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-medium">Trader terminal</p>
                     <p className="mt-1.5 text-2xl font-semibold text-white">Live risk & account pulse</p>
                   </div>
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                    Connected
-                  </span>
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">Connected</span>
                 </div>
                 <HeroTerminal />
               </div>
@@ -703,7 +709,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
           </section>
         </main>
 
-        <section className="mt-24" id="why">
+        <section className="mt-20" id="why">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
               <p className="text-sm uppercase tracking-[0.3em] text-primary font-medium">Why TradeForge</p>
@@ -716,10 +722,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
 
           <div className="mt-10 grid gap-5 lg:grid-cols-4">
             {whyItems.map((item) => (
-              <div
-                key={item.title}
-                className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.75)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/25 hover:bg-white/[0.085] hover:shadow-[0_28px_60px_-28px_rgba(120,87,255,0.32)]"
-              >
+              <div key={item.title} className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.75)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/25 hover:bg-white/[0.085] hover:shadow-[0_28px_60px_-28px_rgba(120,87,255,0.32)]">
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary">
                   <item.icon className="size-5" aria-hidden="true" />
                 </div>
@@ -729,6 +732,47 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
             ))}
           </div>
         </section>
+
+        <section className="mt-20" id="trust-strip">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            {trustPills.map(({ label, icon: Icon }) => (
+              <div key={label} className="flex items-center gap-2 rounded-full border border-white/10 bg-background/40 px-4 py-2 text-sm text-muted-foreground">
+                <Icon className="size-4 text-primary" />
+                <span className="font-medium text-white/90">{label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+
+        <section className="mt-24">
+          <div className="text-center">
+            <p className="text-sm uppercase tracking-[0.3em] text-primary">Your skill is our capital</p>
+            <h2 className="mx-auto mt-4 max-w-3xl text-4xl font-semibold text-white">A structured path built around disciplined execution and risk awareness.</h2>
+          </div>
+
+          <div className="relative mt-14">
+            <div className="pointer-events-none absolute left-1/2 top-12 hidden h-40 w-[calc(100%-12rem)] -translate-x-1/2 border-t border-dashed border-white/10 md:block" />
+            <div className="grid gap-5 md:grid-cols-3">
+              {[
+                { title: "Prove your edge", description: "Show consistency through your evaluation rules and account conditions." },
+                { title: "Build disciplined execution", description: "Trade with defined risk limits and steady decision-making." },
+                { title: "Progress with confidence", description: "Advance through a premium account journey with clear expectations." },
+              ].map((card, index) => (
+                <div key={card.title} className={`relative rounded-[1.7rem] border border-white/10 bg-white/[0.04] p-6 shadow-[0_28px_70px_-40px_rgba(0,0,0,0.76)] ${index === 1 ? "md:-translate-y-7" : ""}`}>
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">0{index + 1}</div>
+                  <h3 className="mt-6 text-xl font-semibold text-white">{card.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">{card.description}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 flex justify-center gap-3">
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.28em] text-primary">Clear rules</span>
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.28em] text-emerald-400">Disciplined by design</span>
+            </div>
+          </div>
+        </section>
+
 
         <section className="mt-24" id="challenges">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -742,12 +786,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
                   key={option}
                   type="button"
                   onClick={() => setActiveTab(option)}
-                  className={cn(
-                    "rounded-full px-5 py-2 text-xs sm:text-sm font-semibold transition duration-300",
-                    activeTab === option
-                      ? "bg-white text-background shadow-glow"
-                      : "text-muted-foreground hover:text-white",
-                  )}
+                  className={cn("rounded-full px-5 py-2 text-xs sm:text-sm font-semibold transition duration-300", activeTab === option ? "bg-white text-background shadow-glow" : "text-muted-foreground hover:text-white")}
                 >
                   {option}
                 </button>
@@ -761,27 +800,33 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
 
           <div className="mt-10">
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 items-start">
-              {challengeCatalogue
-                .filter((plan) => plan.name === activeTab)
-                .flatMap((plan) => plan.sizes.map((accountSize) => ({
-                  size: `$${accountSize / 1000}K`,
-                  price: `$${(plan.pricesBySize[accountSize] / 100).toFixed(0)}`,
-                  profitTarget: plan.profitTarget,
-                  profitSplit: plan.profitSplit,
-                  dailyLoss: plan.dailyLossLimit,
-                  overallLoss: plan.overallLossLimit,
-                  minDays: plan.tradingDays,
-                  payoutFreq: plan.payoutFrequency,
-                  trailingDrawdown: plan.trailingDrawdown ?? undefined,
-                  payoutEligibility: plan.payoutEligibility ?? undefined,
-                  secondaryRules: [],
-                })))
-                .map((item) => (
-                <ChallengeCard key={item.size} model={activeTab} item={item} />
-              ))}
+              {activePlans.flatMap((plan) =>
+                plan.sizes.map((accountSize) => {
+                  const item = {
+                    size: `$${accountSize / 1000}K`,
+                    price: `$${(plan.pricesBySize[accountSize] / 100).toFixed(0)}`,
+                    profitTarget: plan.profitTarget,
+                    profitSplit: plan.profitSplit,
+                    dailyLoss: plan.dailyLossLimit,
+                    overallLoss: plan.overallLossLimit,
+                    minDays: plan.tradingDays,
+                    payoutFreq: plan.payoutFrequency,
+                    trailingDrawdown: plan.trailingDrawdown ?? undefined,
+                    payoutEligibility: plan.payoutEligibility ?? undefined,
+                    secondaryRules: [
+                      { label: "Profit split", value: plan.profitSplit },
+                      { label: "Daily loss", value: plan.dailyLossLimit },
+                      { label: "Overall loss", value: plan.overallLossLimit },
+                      { label: "Payout", value: plan.payoutFrequency },
+                    ],
+                  };
+                  return <ChallengeCard key={`${plan.slug}-${accountSize}`} model={activeTab} item={item} href={`/challenges/${plan.slug}/${accountSize}`} />;
+                }),
+              )}
             </div>
           </div>
         </section>
+
 
         <section className="mt-24" id="how">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -789,9 +834,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
               <p className="text-sm uppercase tracking-[0.3em] text-primary">How it works</p>
               <h2 className="mt-3 text-4xl font-semibold text-white">A premium path from challenge to funded account.</h2>
             </div>
-            <p className="max-w-xl text-sm leading-7 text-muted-foreground">
-              Four simple stages, presented as a refined trading flow with clear expectations at every step.
-            </p>
+            <p className="max-w-xl text-sm leading-7 text-muted-foreground">Four simple stages, presented as a refined trading flow with clear expectations at every step.</p>
           </div>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-4">
@@ -801,18 +844,13 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
               { label: "Qualify", description: "Reach the required target while protecting your evaluation account.", icon: Gauge },
               { label: "Funded", description: "Move toward funded capital and establish your next trading stage.", icon: CircleDollarSign },
             ].map((item, index) => (
-              <div
-                key={item.label}
-                className="group relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/5 p-6 text-white shadow-[0_16px_36px_-24px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/25 hover:bg-white/[0.085] hover:shadow-[0_24px_50px_-24px_rgba(120,87,255,0.3)]"
-              >
+              <div key={item.label} className="group relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/5 p-6 text-white shadow-[0_16px_36px_-24px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:-translate-y-1 hover:border-primary/25 hover:bg-white/[0.085] hover:shadow-[0_24px_50px_-24px_rgba(120,87,255,0.3)]">
                 <div className="absolute inset-x-6 top-6 h-1 rounded-full bg-primary/20" />
                 <div className="relative z-10 flex items-center justify-between gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/10 text-primary">
                     <item.icon className="size-5" aria-hidden="true" />
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-muted-foreground">
-                    {index + 1 < 10 ? `0${index + 1}` : index + 1}
-                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.24em] text-muted-foreground">{index + 1 < 10 ? `0${index + 1}` : index + 1}</span>
                 </div>
                 <h3 className="mt-8 text-xl font-semibold">{item.label}</h3>
                 <p className="mt-3 text-sm leading-7 text-muted-foreground">{item.description}</p>
@@ -821,30 +859,23 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
           </div>
         </section>
 
+
         <section className="mt-24" id="feedback">
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-primary">Trader feedback</p>
               <h2 className="mt-3 text-4xl font-semibold text-white">A premium waiting room for trader stories.</h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
-                Complete your challenge, experience TradeForge, and be among the first traders to share your story.
-              </p>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">Complete your challenge, experience TradeForge, and be among the first traders to share your story.</p>
             </div>
             <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/5 p-10 text-center shadow-[0_36px_90px_-48px_rgba(0,0,0,.55)] backdrop-blur-sm">
               <div className="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Sparkles className="size-7" aria-hidden="true" />
               </div>
               <p className="mt-8 text-lg font-semibold text-white">Trader feedback coming soon</p>
-              <p className="mt-4 text-sm leading-7 text-muted-foreground">
-                The community experience is maturing alongside TradeForge. Your first funding stories will shape the next chapter.
-              </p>
+              <p className="mt-4 text-sm leading-7 text-muted-foreground">The community experience is maturing alongside TradeForge. Your first funding stories will shape the next chapter.</p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                <Button asChild size="sm">
-                  <Link href="#challenges">Take the challenge</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="#feedback">Share your experience</Link>
-                </Button>
+                <Button asChild size="sm"><Link href="#challenges">Take the challenge</Link></Button>
+                <Button asChild variant="outline" size="sm"><Link href="#feedback">Share your experience</Link></Button>
               </div>
             </div>
           </div>
@@ -860,10 +891,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
 
           <div className="mt-10 grid gap-4 xl:grid-cols-2 items-start">
             {faqItems.map((item) => (
-              <details
-                key={item.question}
-                className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_16px_36px_-24px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:border-white/15 [&_summary::-webkit-details-marker]:hidden"
-              >
+              <details key={item.question} className="group rounded-[1.75rem] border border-white/10 bg-white/5 p-6 shadow-[0_16px_36px_-24px_rgba(0,0,0,0.72)] transition duration-300 ease-out hover:border-white/15 [&_summary::-webkit-details-marker]:hidden">
                 <summary className="flex cursor-pointer items-center justify-between gap-4 text-base font-semibold text-white">
                   {item.question}
                   <ArrowUpRight className="size-4 text-muted-foreground transition-transform duration-300 group-open:rotate-45" />
@@ -877,16 +905,10 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
         <section className="mt-24 rounded-[2rem] border border-white/10 bg-surface/95 p-10 text-center shadow-[0_40px_100px_-50px_rgba(0,0,0,.55)]">
           <p className="text-sm uppercase tracking-[0.3em] text-primary">Ready to trade with purpose?</p>
           <h2 className="mt-4 text-4xl font-semibold text-white">Launch your challenge with premium clarity.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
-            Start your challenge with transparent evaluation rules and a refined terminal-style experience.
-          </p>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">Start your challenge with transparent evaluation rules and a refined terminal-style experience.</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button asChild size="lg">
-              <Link href="#challenges">Start Your Challenge</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/sign-in">Sign In</Link>
-            </Button>
+            <Button asChild size="lg"><Link href="#challenges">Start Your Challenge</Link></Button>
+            <Button asChild variant="outline" size="lg"><Link href="/sign-in">Sign In</Link></Button>
           </div>
         </section>
 
@@ -894,9 +916,7 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-white">TradeForge</p>
-              <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                Premium challenge evaluation and funded trading experience with a focus on clarity, trust, and disciplined risk management.
-              </p>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">Premium challenge evaluation and funded trading experience with a focus on clarity, trust, and disciplined risk management.</p>
             </div>
             <div className="flex flex-wrap gap-4 text-sm">
               <a href="#challenges" className="transition hover:text-white">Challenges</a>
