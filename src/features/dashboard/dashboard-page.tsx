@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Activity,
   ArrowRight,
   BarChart3,
   CalendarDays,
@@ -24,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { DemoAction } from "@/components/workspace/demo-action";
 import { MetricCard } from "@/components/workspace/metric-card";
 import { PageHeader } from "@/components/workspace/page-header";
-import { ProgressBar } from "@/components/workspace/progress-bar";
 import { SectionCard } from "@/components/workspace/section-card";
 import { StatusBadge } from "@/components/workspace/status-badge";
 import type { Account } from "@/features/workspace/types";
@@ -79,6 +77,22 @@ function formatPercent(value: number) {
 function clampPercent(value: number) {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, value));
+}
+
+function parsePercentValue(value: string | number | null | undefined): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const match = value.match(/(\d+(?:\.\d+)?)/);
+  if (!match) {
+    return null;
+  }
+
+  return Number(match[1]);
 }
 
 function normalizeAccountStatus(status: string | null): Account["status"] {
@@ -312,14 +326,15 @@ const tradingAvailable =
   selectedAccount?.platform !== "Not connected";
 
 const challengePlan = selectedAccount?.challengePlan ?? null;
+const profitTargetPercent = challengePlan ? parsePercentValue(challengePlan.profitTarget) : null;
 
 const targetAmount =
-  challengePlan !== null
-    ? accountSize * (challengePlan.profitTarget / 100)
+  challengePlan !== null && profitTargetPercent !== null && Number.isFinite(profitTargetPercent)
+    ? accountSize * (profitTargetPercent / 100)
     : null;
 
 const targetRemaining =
-  targetAmount !== null && currentProfit !== null
+  targetAmount !== null && currentProfit !== null && Number.isFinite(targetAmount)
     ? Math.max(0, targetAmount - currentProfit)
     : null;
 
@@ -332,16 +347,15 @@ const hasTradingActivity =
 const profitTargetProgress =
   hasTradingActivity &&
   challengePlan !== null &&
-  selectedAccount?.pnlPercent !== null
-    ? clampPercent(
-        (selectedAccount.pnlPercent / challengePlan.profitTarget) * 100
-      )
+  selectedAccount?.pnlPercent !== null &&
+  profitTargetPercent !== null &&
+  profitTargetPercent > 0
+    ? clampPercent((selectedAccount.pnlPercent / profitTargetPercent) * 100)
     : null;
 
 const dailyDrawdownPercent = null;
 const overallDrawdownPercent = null;
-const tradingDaysValue = null;
- const kpis = [
+const kpis = [
   {
     label: "Balance",
     value: tradingAvailable && balance !== null ? money(balance) : "Unavailable",
@@ -409,8 +423,8 @@ const tradingDaysValue = null;
   {
     label: "Profit target",
     value:
-      challengePlan !== null
-        ? `${challengePlan.profitTarget}%`
+      challengePlan !== null && profitTargetPercent !== null
+        ? `${profitTargetPercent.toFixed(0)}%`
         : "Unavailable",
     detail:
       targetRemaining !== null
