@@ -17,6 +17,7 @@ import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ChallengePlan } from "@/features/challenges/challenge-catalogue";
+import { HomeAnimatedBackground } from "./home-animated-background";
 
 const whyItems = [
   {
@@ -618,11 +619,12 @@ export function HomePage({ challengeCatalogue }: { challengeCatalogue: Challenge
 
   return (
     <div className="relative overflow-hidden bg-background text-foreground">
+      <HomeAnimatedBackground />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[900px] bg-[radial-gradient(circle_at_20%_15%,hsl(var(--primary)/.22),transparent_50%),radial-gradient(circle_at_80%_20%,hsl(220_100%_76%/.16),transparent_45%),radial-gradient(circle_at_50%_60%,hsl(267_89%_72%/.10),transparent_55%)] blur-3xl opacity-85 animate-[ambientDrift_24s_ease-in-out_infinite_alternate]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.025)_48%,transparent_100%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:120px_120px]" />
 
-      <div className="relative mx-auto flex max-w-[1400px] flex-col px-4 py-8 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto flex max-w-[1400px] flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-6 border-b border-white/10 pb-8 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-tf-lg bg-primary-solid text-sm font-bold text-primary-solid-foreground shadow-glow">T</span>
